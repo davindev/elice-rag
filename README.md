@@ -142,7 +142,7 @@ curl -N -X POST localhost:3000/ask/stream \
 | unanswerable | 5 | corpus에 근거가 없는 질의 — hallucination 탐침 |
 
 - 각 문항: `question`, `expectedEvidence`(근거 문서 경로), `acceptanceCriteria`(자연어 수용 기준), `referenceAnswer`(선택)
-- **구축 방법**: 문서를 직접 읽고 작성한 뒤, 모든 `expectedEvidence` 경로가 corpus에 실재하는지, unanswerable 문항의 근거가 corpus 어디에도 없는지 스크립트로 교차 검증했습니다. (예: 초안의 "createRoot 사용법" 문항은 `learn/add-react-to-an-existing-project.md`에 사용 예가 있어 unanswerable 라벨이 틀린 것으로 확인되어 교체)
+- **구축 방법**: 문서를 직접 읽고 작성한 뒤, 모든 `expectedEvidence` 경로가 corpus에 실재하는지, unanswerable 문항의 근거가 corpus 어디에도 없는지 스크립트로 교차 검증했습니다. 그럼에도 라벨 결함 2건이 실제 평가 과정에서 발견되어 보정했습니다 — ① 초안의 "createRoot 사용법" 문항은 corpus에 사용 예가 있어 unanswerable 라벨이 틀림(문항 교체), ② q17의 수용 기준이 문서상 유효한 복수 시나리오 중 하나만 인정(기준 확장, goldset에 보정 이력 기록). 라벨도 코드처럼 결함이 생기고 평가로 검증되어야 한다는 것이 실측된 셈입니다.
 - **unanswerable 설계**: LLM이 사전지식으로 아는 실존 API(react-dom 소속), corpus에 없는 사실(버전·출시일), 존재하지 않는 API(`useWatchEffect`) 세 가지 하위 유형으로 구성 — 서로 다른 hallucination 경로를 자극합니다.
 - **언어**: corpus가 영어이므로 주 집계는 영어 22문항. 한국어 3문항은 cross-lingual robustness probe로 분리 집계합니다 (한국어 질의 ↔ 영어 문서 매칭은 임베딩 품질·FTS에 별도 변수가 개입하므로 주 지표를 오염시키지 않도록 격리).
 - **편향·한계**: 단일 작성자 라벨(합의 검증 없음), 소규모(문항당 분산 큼), useState 등 핵심 API에 커버리지 편중, 실사용 로그가 아닌 작성 질의(실제 사용자 표현 분포와 다를 수 있음).
@@ -170,7 +170,7 @@ curl -N -X POST localhost:3000/ask/stream \
 - temperature 0 + 명시적 3단계 rubric + few-shot 예시로 판정 분산 최소화
 - Judge 모델을 생성 모델과 다른 모델로 사용 (self-preference bias 완화)
 - Judge 프롬프트를 해시로 run 메타데이터에 기록 — 판정 기준 변경 추적
-- **Human alignment**: baseline run 답변 중 15건을 사람이 직접 채점(`eval/human-labels.jsonl`)하고 `scripts/judge-agreement.ts`로 judge와의 일치율 측정 → _(baseline run 후 기록 예정)_
+- **Human alignment (측정 완료)**: baseline run 답변 15건(correctness 10 + faithfulness 5)을 작성자가 judge 점수 비공개 상태에서 동일 rubric으로 직접 채점(`eval/human-labels.jsonl`) → judge와 **정확 일치 86.7%, ±0.5 이내 93.3%** (`scripts/judge-agreement.ts`). 유일한 1.0 등급 불일치(q17)는 judge 결함이 아니라 human 채점과 judge 실행 사이에 수용 기준이 보정된 버전 차이로, 이를 제외하면 정확 일치 92.9%·±0.5 이내 100%. 한계: 라벨러가 goldset 작성자와 동일인이라 기준 해석이 유리하게 정렬됐을 수 있음(독립 라벨러 검증은 향후 과제)
 
 **Metric의 한계와 맹점 (인지하고 있는 것):**
 
@@ -212,27 +212,34 @@ dense 임베딩 단독 검색은 `useLayoutEffect`, `useSyncExternalStore` 같�
 
 ### Result
 
-_(baseline·hybrid run 후 기록 예정)_
+생성 `gpt-4o-mini` / 임베딩 `text-embedding-3-small` / judge `gpt-4o`, topK=5, temperature 0 (상세 설정·해시는 `eval/runs/*/config.json`):
 
 | Metric | dense (before) | hybrid (after) | Δ |
 |---|---|---|---|
-| Recall@k | – | – | – |
-| MRR | – | – | – |
-| Citation Precision | – | – | – |
-| Abstention Accuracy | – | – | – |
-| Faithfulness | – | – | – |
-| Correctness | – | – | – |
+| Recall@k | 1.000 | 1.000 | 0 |
+| MRR | 0.866 | 0.866 | 0 |
+| Citation Precision | 0.694 | **0.750** | +0.056 |
+| Abstention Accuracy | 1.000 | 1.000 | 0 |
+| False Refusal Rate | 0.000 | 0.000 | 0 |
+| Faithfulness | 1.000 | 1.000 | 0 |
+| Correctness | 0.917 | 0.917 | 0 |
 
 ### Analysis
 
-_(run 후 기록 예정 — 문항 유형별 승패, 가설 적중 여부, 하락 시 원인 분석)_
+**가설은 부분적으로만 적중했고, 예상한 경로가 아니었다.**
+
+- **1차 메커니즘(Recall 향상)은 발휘될 공간이 없었다.** dense 단독으로 이미 Recall@k 1.000, MRR 0.866으로 문서 단위 검색이 사실상 천장이었다. corpus가 96문서로 작고 문서 주제가 서로 뚜렷이 구분되어, 임베딩만으로 doc-level 검색이 포화된 것. "dense가 API 심볼 매칭에 약할 것"이라는 전제는 이 corpus 규모에서는 성립하지 않았다.
+- **재현된 신호는 Citation Precision(+0.056)뿐이다.** 문항 단위 diff에서 변화는 3문항: q01(0.5→1)·q04(0→1)는 FTS가 질문 키워드와 정확히 일치하는 문서를 후보 상위로 끌어올려 모델이 더 정확한 문서를 인용했고, q08(1→0.5)은 소폭 하락했다. 이 패턴은 goldset 보정 전후 두 쌍의 run에서 **동일하게 재현**됐다. 즉 hybrid의 효과는 "못 찾던 문서를 찾게 됨"이 아니라 "**컨텍스트 구성이 바뀌어 모델의 인용 선택이 달라짐**"이다.
+- **Correctness 차이는 분산으로 판명됐다.** 초기 run 쌍에서는 hybrid가 +0.028 우위였으나, 재실행에서 dense의 q04가 기준 변경 없이 0.5→1로 흔들리며 동률(0.917)이 됐다 — temperature 0에서도 생성·judge에 ±0.5 등급의 실측 분산이 존재함을 확인. 단일 run의 judge metric 차이는 이 분산보다 커야만 의미가 있다.
+- **평가 중 gold label 결함을 발견·보정했다.** q17의 수용 기준이 문서상 유효한 두 시나리오(의존성 배열 부재 / reactive value 변경) 중 하나만 인정하고 있었고, 시스템 답변은 corpus 챌린지 해설과 사실상 동일한 문서 공인 진단이었다. 기준을 두 경로 모두 허용하도록 보정(goldset에 보정 이력 기록)한 뒤 양쪽 run을 재실행했다 — Eval Harness가 시스템만이 아니라 **gold set 자체의 결함을 드러내는 도구**로도 작동한 사례.
+- **q12(correctness 0)는 hybrid로도 개선되지 않았다** — 검색은 정답 문서를 찾았지만 생성 모델이 함께 검색된 유사 문서(reacting-to-input-with-state의 5단계)를 근거로 선택한 생성 단계 실패로, 검색 개선으로는 풀리지 않는 실패 유형임이 확인됐다.
 
 ### Next Steps
 
-- **Reranker 도입**: 검색 후보 20개를 cross-encoder로 재정렬 — RRF보다 정밀하지만 지연 비용 측정 필요
-- **청킹 A/B**: heading-aware vs 고정 크기 — 테이블 2개 병렬 인덱싱으로 동일 Eval 비교
+- **검색 난이도 재설계**: doc-level Recall이 포화된 상태에서는 검색 실험의 분해능이 없다 — 청크 단위 evidence 라벨 도입 또는 다중 문서 조합(multi-hop) 문항 추가로 검색 metric의 천장을 낮추는 것이 선행 과제
+- **생성 단계 실패 대응**: q12·q17 유형(검색은 성공, 근거 선택·적용 실패)에는 컨텍스트 수 축소(topK 튜닝), 유사 문서 간 구분 강화 프롬프트, reranker(cross-encoder)가 후보
+- **Judge 반복 실행**: 동일 run을 judge만 3회 반복해 판정 분산을 실측 — 개선 폭이 분산보다 큰지 검정
 - **Query rewriting**: 한국어 질의를 영어로 변환 후 검색 — ko probe 성능 개선 가설
-- **Citation Recall metric 추가**: 다중 근거 문항을 늘려 분모를 안정화한 뒤 도입
 - **Gold Set 확장**: 실사용 질의 로그 기반 문항 추가, 복수 라벨러 합의로 라벨 신뢰도 향상
 
 ## 한계점 및 알려진 이슈
