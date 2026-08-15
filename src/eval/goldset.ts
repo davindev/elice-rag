@@ -13,6 +13,14 @@ const goldItemSchema = z.object({
    * 요약 등 문서 전체가 근거인 문항은 라벨을 생략한다 (해당 문항은 anchorRecall 집계에서 제외).
    */
   expectedAnchors: z.array(z.object({ doc: z.string(), anchor: z.string() })).optional(),
+  /**
+   * 인용해도 정당한 추가 문서 — Citation Precision 판정에만 사용 (Recall에는 불포함).
+   * expectedEvidence(필수 근거)와 분리한 이유: corpus에 챕터 인덱스 등 같은 내용을
+   * 담은 문서가 복수 존재해, "필요한 것을 찾았는가"(recall)와 "인용이 정당한가"(precision)의
+   * 기준 문서 집합이 다르기 때문. 시스템이 인용한 라벨 밖 문서를 corpus 원문 대조로
+   * 검증해 정당한 경우에만 추가한다 (감사 이력은 notes에 기록).
+   */
+  acceptableEvidence: z.array(z.string()).optional(),
   acceptanceCriteria: z.string().min(1),
   referenceAnswer: z.string().optional(),
   notes: z.string().optional(),
