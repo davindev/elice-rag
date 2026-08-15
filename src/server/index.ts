@@ -10,7 +10,11 @@ const pool = createPool(config.DATABASE_URL);
 const llm = createOpenAiCompatibleClient(config);
 
 const app = createApp({
-  retriever: createRetriever(config.RETRIEVER, pool, llm),
+  retriever: createRetriever(config.RETRIEVER, {
+    pool,
+    llm,
+    rerankModel: config.RERANK_MODEL ?? config.LLM_MODEL,
+  }),
   llm,
   llmModel: config.LLM_MODEL,
   minScore: config.RETRIEVAL_MIN_SCORE,

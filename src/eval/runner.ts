@@ -7,7 +7,8 @@ import { createPool } from '../db.js';
 import { createOpenAiCompatibleClient } from '../llm/client.js';
 import { askDetailed, type RagDeps } from '../rag/pipeline.js';
 import { INSUFFICIENT_SENTINEL, RAG_SYSTEM_PROMPT } from '../rag/prompts.js';
-import { createRetriever, type RetrieverKind } from '../retrieval/index.js';
+import { createRetriever, RETRIEVER_KINDS, type RetrieverKind } from '../retrieval/index.js';
+import { RERANK_CANDIDATE_MULTIPLIER, RERANK_SYSTEM_PROMPT } from '../retrieval/rerank.js';
 import { type GoldItem, loadGoldset } from './goldset.js';
 import {
   CORRECTNESS_JUDGE_PROMPT,
@@ -18,6 +19,7 @@ import {
 } from './judge.js';
 import { anchorRecallAtK, citationPrecision, recallAtK, reciprocalRank } from './metrics.js';
 import { type QuestionResult, summarize, writeRun } from './report.js';
+import { checkGates } from './targets.js';
 
 const GOLDSET_PATH = path.resolve(import.meta.dirname, '../../eval/goldset.jsonl');
 const RUNS_DIR = path.resolve(import.meta.dirname, '../../eval/runs');
@@ -26,15 +28,16 @@ function sha256(text: string): string {
   return createHash('sha256').update(text).digest('hex');
 }
 
-/** --retriever dense|hybrid CLI 플래그가 env보다 우선한다 (before/after 실험 편의) */
+/** --retriever CLI 플래그가 env보다 우선한다 (before/after 실험 편의) */
 function resolveRetrieverKind(fallback: RetrieverKind): RetrieverKind {
   const flagIndex = process.argv.indexOf('--retriever');
   if (flagIndex === -1) return fallback;
   const value = process.argv[flagIndex + 1];
-  if (value !== 'dense' && value !== 'hybrid') {
-    throw new Error(`--retriever 값이 잘못되었습니다: ${value} (dense|hybrid)`);
+  const match = RETRIEVER_KINDS.find((kind) => kind === value);
+  if (match === undefined) {
+    throw new Error(`--retriever 값이 잘못되었습니다: ${value} (${RETRIEVER_KINDS.join('|')})`);
   }
-  return value;
+  return match;
 }
 
 async function evaluateItem(
@@ -52,7 +55,11 @@ async function evaluateItem(
     anchorRecall: anchorRecallAtK(item.expectedAnchors ?? [], contexts),
     reciprocalRank: reciprocalRank(item.expectedEvidence, retrievedDocs),
     citationPrecision: result.answerable
-      ? citationPrecision(item.expectedEvidence, result.citations)
+      ? citationPrecision(
+          // precision 판정은 필수 근거 + 검증된 대체 근거(acceptableEvidence)를 모두 정답으로 인정
+          [...item.expectedEvidence, ...(item.acceptableEvidence ?? [])],
+          result.citations,
+        )
       : Number.NaN,
     abstentionCorrect: isUnanswerable ? (result.answerable ? 0 : 1) : result.answerable ? 1 : 0,
     faithfulness: Number.NaN,
@@ -124,8 +131,22 @@ async function main() {
   const pool = createPool(config.DATABASE_URL);
   const llm = createOpenAiCompatibleClient(config);
 
+  const rerankModel = config.RERANK_MODEL ?? config.LLM_MODEL;
+  // rerank fallback(파싱 실패 → 원 순위 사용)은 rerank arm에 dense 결과를 섞으므로
+  // 반드시 run 메타데이터에 남긴다 — 0이어야 "순수한 rerank run"이라고 주장할 수 있다
+  let rerankFallbackCount = 0;
   const ragDeps: RagDeps = {
-    retriever: createRetriever(retrieverKind, pool, llm),
+    retriever: createRetriever(retrieverKind, {
+      pool,
+      llm,
+      rerankModel,
+      rerankOptions: {
+        onFallback: (raw) => {
+          rerankFallbackCount += 1;
+          console.warn(`rerank 파싱 실패 → 원 순위 fallback: ${raw.slice(0, 120)}`);
+        },
+      },
+    }),
     llm,
     llmModel: config.LLM_MODEL,
     minScore: config.RETRIEVAL_MIN_SCORE,
@@ -164,6 +185,13 @@ async function main() {
       judgePromptHash: sha256(FAITHFULNESS_JUDGE_PROMPT + CORRECTNESS_JUDGE_PROMPT),
       goldsetHash: sha256(await readFile(GOLDSET_PATH, 'utf-8')),
       nodeVersion: process.version,
+      // rerank run의 재현성: rerank 고유 설정을 함께 기록 (다른 retriever면 생략)
+      ...(retrieverKind === 'rerank' && {
+        rerankModel,
+        rerankCandidateK: config.TOP_K * RERANK_CANDIDATE_MULTIPLIER,
+        rerankPromptHash: sha256(RERANK_SYSTEM_PROMPT),
+        rerankFallbackCount,
+      }),
     },
     summary,
     results,
@@ -178,9 +206,25 @@ async function main() {
   console.log(`False Refusal Rate  ${summary.falseRefusalRate.toFixed(3)}`);
   console.log(`Faithfulness        ${summary.faithfulness.toFixed(3)}`);
   console.log(`Correctness         ${summary.correctness.toFixed(3)}`);
+
+  const violations = checkGates(summary);
+  if (violations.length > 0) {
+    console.log('\n⚠️  gate 미달 metric:');
+    for (const v of violations) {
+      const op = v.direction === 'min' ? '>=' : '<=';
+      console.log(`  - ${v.label}: ${v.actual.toFixed(3)} (gate ${op} ${v.gate})`);
+    }
+  } else {
+    console.log('\n✅ 모든 metric gate 통과');
+  }
   console.log(`\nreport: ${runDir}/report.md`);
 
   await pool.end();
+
+  // CI 회귀 차단용: --strict면 gate 미달 시 실패 종료
+  if (violations.length > 0 && process.argv.includes('--strict')) {
+    process.exit(1);
+  }
 }
 
 main().catch((error) => {

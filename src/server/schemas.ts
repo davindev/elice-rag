@@ -19,7 +19,10 @@ export const citationSchema = z
     docPath: z.string().openapi({ example: 'reference/react/useState.md' }),
     headingPath: z.array(z.string()).openapi({ example: ['useState', 'Reference'] }),
     url: z.string().openapi({ example: 'https://react.dev/reference/react/useState#reference' }),
-    score: z.number().openapi({ description: '검색 유사도 (cosine similarity)' }),
+    score: z.number().openapi({
+      description:
+        '검색 점수 — 의미는 서버의 RETRIEVER 설정에 따름 (dense: cosine similarity, hybrid: RRF, rerank: dense 원 점수)',
+    }),
   })
   .openapi('Citation');
 

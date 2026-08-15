@@ -28,7 +28,7 @@ export interface RagDeps {
   retriever: Retriever;
   llm: LlmClient;
   llmModel: string;
-  /** top-1 유사도가 이 값 미만이면 생성 없이 즉시 응답 불가 처리 (Eval로 튜닝) */
+  /** 검색 최고 점수가 이 값 미만이면 생성 없이 즉시 응답 불가 처리 (Eval로 튜닝, retriever별 별도 캘리브레이션 필요) */
   minScore: number;
 }
 
@@ -111,7 +111,8 @@ function checkRetrievalGate(
   contexts: StoredChunk[],
   startedAt: number,
 ): AskResult | null {
-  const topScore = contexts[0]?.score ?? 0;
+  // rerank는 순서를 바꾸되 score는 원 점수를 유지하므로, 첫 요소가 아닌 최고 점수로 판정한다
+  const topScore = contexts.length === 0 ? 0 : Math.max(...contexts.map((c) => c.score));
   if (contexts.length === 0 || topScore < deps.minScore) {
     return {
       answerable: false,
