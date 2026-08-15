@@ -1,0 +1,1466 @@
+{
+  "summary": {
+    "recallAtK": 0.9782608695652174,
+    "anchorRecallAtK": 0.7857142857142857,
+    "mrr": 0.8840579710144929,
+    "citationPrecision": 0.717391304347826,
+    "abstentionAccuracy": 1,
+    "falseRefusalRate": 0,
+    "faithfulness": 1,
+    "correctness": 0.9130434782608695,
+    "byType": {
+      "factoid": {
+        "count": 9,
+        "correctness": 0.9444444444444444,
+        "faithfulness": 1
+      },
+      "summary": {
+        "count": 5,
+        "correctness": 0.8,
+        "faithfulness": 1
+      },
+      "reasoning": {
+        "count": 4,
+        "correctness": 1,
+        "faithfulness": 1
+      },
+      "multihop": {
+        "count": 5,
+        "correctness": 0.9,
+        "faithfulness": 1
+      },
+      "unanswerable": {
+        "count": 4,
+        "correctness": null,
+        "faithfulness": null
+      }
+    },
+    "koProbe": {
+      "count": 3,
+      "correctness": 1,
+      "abstentionAccuracy": 1
+    }
+  },
+  "results": [
+    {
+      "id": "q01",
+      "type": "factoid",
+      "language": "en",
+      "question": "What does useState return?",
+      "systemAnswerable": true,
+      "answer": "`useState` returns an array with exactly two values:\n\n1. The current state of the state variable.\n2. The `set` function that lets you update the state to a different value and trigger a re-render [2][3].",
+      "retrievedDocs": [
+        "reference/react/useState.md",
+        "learn/state-a-components-memory.md",
+        "reference/react/useState.md",
+        "reference/react/useState.md",
+        "learn/adding-interactivity.md"
+      ],
+      "citedDocs": [
+        "learn/state-a-components-memory.md",
+        "reference/react/useState.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 2,
+          "chunkId": "17ce2ef87b66bc73e1d6cdfd",
+          "docPath": "learn/state-a-components-memory.md",
+          "url": "https://react.dev/learn/state-a-components-memory#anatomy-of-usestate",
+          "content": "### Anatomy of `useState`\n\nWhen you call [`useState`](/reference/react/useState), you are telling React that you want this component to remember something:\n\n```js\nconst [index, setIndex] = useState(0);\n```\n\nIn this case, you want React to remember `index`.\n\nThe convention is to name this pair like `const [something, setSomething]`. You could name it anything you like, but conventions make things easier to understand across projects.\n\nThe only argument to `useState` is the **initial value** of your state variable. In this example, the `index`'s initial value is set to `0` with `useState(0)`.\n\nEvery time your component renders, `useState` gives you an array containing two values:\n\n1. The **state variable** (`index`) with the value you stored.\n2. The **state setter function** (`setIndex`) which can update the state variable and trigger React to render the component again.\n\nHere's how that happens in action:\n\n```js\nconst [index, setIndex] = useState(0);\n```\n\n1. **Your component renders the first time.** Because you passed `0` to `useState` as the initial value for `index`, it will return `[0, setIndex]`. React remembers `0` is the latest state value.\n2. **You update the state.** When a user clicks the button, it calls `setIndex(index + 1)`. `index` is `0`, so it's `setIndex(1)`. This tells React to remember `index` is `1` now and triggers another render.\n3. **Your component's second render.** React still sees `useState(0)`, but because React *remembers* that you set `index` to `1`, it returns `[1, setIndex]` instead.\n4. And so on!"
+        },
+        {
+          "index": 3,
+          "chunkId": "1f758513abf2d050156d1a73",
+          "docPath": "reference/react/useState.md",
+          "url": "https://react.dev/reference/react/useState#reference",
+          "content": "## Reference\n\n\n\n### `useState(initialState)`\n\nCall `useState` at the top level of your component to declare a [state variable.](/learn/state-a-components-memory)\n\n```js\nimport { useState } from 'react';\n\nfunction MyComponent() {\n  const [age, setAge] = useState(28);\n  const [name, setName] = useState('Taylor');\n  const [todos, setTodos] = useState(() => createTodos());\n  // ...\n```\n\nThe convention is to name state variables like `[something, setSomething]` using [array destructuring.](https://javascript.info/destructuring-assignment)\n\n[See more examples below.](#usage)\n\n#### Parameters\n\n* `initialState`: The value you want the state to be initially. It can be a value of any type, but there is a special behavior for functions. This argument is ignored after the initial render.\n  * If you pass a function as `initialState`, it will be treated as an _initializer function_. It should be pure, should take no arguments, and should return a value of any type. React will call your initializer function when initializing the component, and store its return value as the initial state. [See an example below.](#avoiding-recreating-the-initial-state)\n\n#### Returns\n\n`useState` returns an array with exactly two values:\n\n1. The current state. During the first render, it will match the `initialState` you have passed.\n2. The [`set` function](#setstate) that lets you update the state to a different value and trigger a re-render.\n\n#### Caveats\n\n* `useState` is a Hook, so you can only call it **at the top level of your component** or your own Hooks. You can't call it inside loops or conditions. If you need that, extract a new component and move the state into it.\n* In Strict Mode, React will **call your initializer function twice** in order to [help you find accidental impurities.](#my-initializer-or-updater-function-runs-twice) This is development-only behavior and does not affect production. If your initializer function is pure (as it should be), this should not affect the behavior. The result from one of the calls will be ignored.\n\n---"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer is fully supported by the passages. Passage [2] and [3] both confirm that `useState` returns an array with two values: the current state and the set function.",
+        "correctness": "The answer correctly states that useState returns an array of exactly two values: the current state and a set function that updates it and triggers a re-render."
+      },
+      "latencyMs": 4312
+    },
+    {
+      "id": "q02",
+      "type": "factoid",
+      "language": "en",
+      "question": "If I pass no dependency array to useEffect, when does the effect run?",
+      "systemAnswerable": true,
+      "answer": "If you pass no dependency array to `useEffect`, the effect runs after every render. This means it re-runs after every commit, which is indicated by the absence of a dependency array [1].",
+      "retrievedDocs": [
+        "reference/react/useEffect.md",
+        "reference/react/useEffect.md",
+        "learn/lifecycle-of-reactive-effects.md",
+        "learn/synchronizing-with-effects.md",
+        "learn/removing-effect-dependencies.md"
+      ],
+      "citedDocs": [
+        "reference/react/useEffect.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "32dd1ff4e134861a10a3376c",
+          "docPath": "reference/react/useEffect.md",
+          "url": "https://react.dev/reference/react/useEffect#my-effect-runs-after-every-re-render",
+          "content": "### My Effect runs after every re-render\n\nFirst, check that you haven't forgotten to specify the dependency array:\n\n```js {3}\nuseEffect(() => {\n  // ...\n}); // 🚩 No dependency array: re-runs after every commit!\n```\n\nIf you've specified the dependency array but your Effect still re-runs in a loop, it's because one of your dependencies is different on every re-render.\n\nYou can debug this problem by manually logging your dependencies to the console:\n\n```js {5}\n  useEffect(() => {\n    // ..\n  }, [serverUrl, roomId]);\n\n  console.log([serverUrl, roomId]);\n```\n\nYou can then right-click on the arrays from different re-renders in the console and select \"Store as a global variable\" for both of them. Assuming the first one got saved as `temp1` and the second one got saved as `temp2`, you can then use the browser console to check whether each dependency in both arrays is the same:\n\n```js\nObject.is(temp1[0], temp2[0]); // Is the first dependency the same between the arrays?\nObject.is(temp1[1], temp2[1]); // Is the second dependency the same between the arrays?\nObject.is(temp1[2], temp2[2]); // ... and so on for every dependency ...\n```\n\nWhen you find the dependency that is different on every re-render, you can usually fix it in one of these ways:\n\n- [Updating state based on previous state from an Effect](#updating-state-based-on-previous-state-from-an-effect)\n- [Removing unnecessary object dependencies](#removing-unnecessary-object-dependencies)\n- [Removing unnecessary function dependencies](#removing-unnecessary-function-dependencies)\n- [Reading the latest props and state from an Effect](#reading-the-latest-props-and-state-from-an-effect)\n\nAs a last resort (if these methods didn't help), wrap its creation with [`useMemo`](/reference/react/useMemo#memoizing-a-dependency-of-another-hook) or [`useCallback`](/reference/react/useCallback#preventing-an-effect-from-firing-too-often) (for functions).\n\n---"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 0,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer correctly states that if no dependency array is passed to useEffect, the effect runs after every render, which is supported by passage [1].",
+        "correctness": "The answer correctly states that without a dependency array, the effect runs after every render of the component, satisfying the acceptance criteria."
+      },
+      "latencyMs": 2231
+    },
+    {
+      "id": "q03",
+      "type": "factoid",
+      "language": "en",
+      "question": "What does the cache API do, and where can it be used?",
+      "systemAnswerable": true,
+      "answer": "The `cache` API allows you to cache the result of a data fetch or computation, enabling you to skip duplicate work when the same inputs are used. It is specifically for use with React Server Components [1][4].",
+      "retrievedDocs": [
+        "reference/react/cache.md",
+        "reference/react/cache.md",
+        "reference/react/cache.md",
+        "reference/react/cache.md",
+        "reference/react/cache.md"
+      ],
+      "citedDocs": [
+        "reference/react/cache.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "506735e17aa485d68072746d",
+          "docPath": "reference/react/cache.md",
+          "url": "https://react.dev/reference/react/cache",
+          "content": "`cache` is only for use with [React Server Components](/reference/rsc/server-components).\n\n`cache` lets you cache the result of a data fetch or computation.\n\n```js\nconst cachedFn = cache(fn);\n```\n\n---"
+        },
+        {
+          "index": 4,
+          "chunkId": "670dbf3076ec37fd049e78e2",
+          "docPath": "reference/react/cache.md",
+          "url": "https://react.dev/reference/react/cache#deep-dive-cache",
+          "content": "#### `cache`\n\nIn general, you should use `cache` in Server Components to memoize work that can be shared across components.\n\n```js [[1, 12, \"\"], [3, 13, \"\"], [2, 1, \"cache(fetchReport)\"]]\nconst cachedFetchReport = cache(fetchReport);\n\nfunction WeatherReport({city}) {\n  const report = cachedFetchReport(city);\n  // ...\n}\n\nfunction App() {\n  const city = \"Los Angeles\";\n  return (\n    <>\n\n    </>\n  );\n}\n```\nRe-writing the previous example to use `cache`, in this case the <CodeStep step={3}>second instance of `WeatherReport`</CodeStep> will be able to skip duplicate work and read from the same cache as the <CodeStep step={1}>first `WeatherReport`</CodeStep>. Another difference from the previous example is that `cache` is also recommended for <CodeStep step={2}>memoizing data fetches</CodeStep>, unlike `useMemo` which should only be used for computations.\n\nAt this time, `cache` should only be used in Server Components and the cache will be invalidated across server requests.\n\n#### `memo`\n\nYou should use [`memo`](reference/react/memo) to prevent a component re-rendering if its props are unchanged.\n\n```js\n'use client';\n\nfunction WeatherReport({record}) {\n  const avgTemp = calculateAvg(record);\n  // ...\n}\n\nconst MemoWeatherReport = memo(WeatherReport);\n\nfunction App() {\n  const record = getRecord();\n  return (\n    <>\n\n    </>\n  );\n}\n```\n\nIn this example, both `MemoWeatherReport` components will call `calculateAvg` when first rendered. However, if `App` re-renders, with no changes to `record`, none of the props have changed and `MemoWeatherReport` will not re-render.\n\nCompared to `useMemo`, `memo` memoizes the component render based on props vs. specific computations. Similar to `useMemo`, the memoized component only caches the last render with the last prop values. Once the props change, the cache invalidates and the component re-renders.\n\n---"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately states that the `cache` API is used to cache the result of a data fetch or computation and is specifically for use with React Server Components, which is supported by passages [1] and [4].",
+        "correctness": "The answer states that the cache API memoizes the result of a data fetch or computation and specifies that it is for use in Server Components only, satisfying all acceptance criteria."
+      },
+      "latencyMs": 3134
+    },
+    {
+      "id": "q04",
+      "type": "factoid",
+      "language": "en",
+      "question": "How can I make a component skip re-rendering when its props have not changed?",
+      "systemAnswerable": true,
+      "answer": "You can make a component skip re-rendering when its props have not changed by using `memo` for functional components or by extending `PureComponent` for class components. \n\nFor functional components, wrap the component in `memo`:\n\n```js\nconst MemoizedComponent = memo(SomeComponent);\n```\nThis tells React not to re-render the component as long as its props remain the same [1][2].\n\nFor class components, extend `PureComponent`:\n\n```js\nclass MyComponent extends PureComponent {\n  render() {\n    // rendering logic\n  }\n}\n```\nThis allows React to skip re-rendering when the props and state are the same [3][5].",
+      "retrievedDocs": [
+        "reference/react/memo.md",
+        "reference/react/memo.md",
+        "reference/react/PureComponent.md",
+        "reference/react/memo.md",
+        "reference/react/PureComponent.md"
+      ],
+      "citedDocs": [
+        "reference/react/memo.md",
+        "reference/react/PureComponent.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "c089c86028c39d41b91821f3",
+          "docPath": "reference/react/memo.md",
+          "url": "https://react.dev/reference/react/memo#usage",
+          "content": "## Usage\n\n\n\n### Skipping re-rendering when props are unchanged\n\nReact normally re-renders a component whenever its parent re-renders. With `memo`, you can create a component that React will not re-render when its parent re-renders so long as its new props are the same as the old props. Such a component is said to be *memoized*.\n\nTo memoize a component, wrap it in `memo` and use the value that it returns in place of your original component:\n\n```js\nconst Greeting = memo(function Greeting({ name }) {\n  return <h1>Hello, {name}!</h1>;\n});\n\nexport default Greeting;\n```\n\nA React component should always have [pure rendering logic.](/learn/keeping-components-pure) This means that it must return the same output if its props, state, and context haven't changed. By using `memo`, you are telling React that your component complies with this requirement, so React doesn't need to re-render as long as its props haven't changed. Even with `memo`, your component will re-render if its own state changes or if a context that it's using changes.\n\nIn this example, notice that the `Greeting` component re-renders whenever `name` is changed (because that's one of its props), but not when `address` is changed (because it's not passed to `Greeting` as a prop):\n\n**You should only rely on `memo` as a performance optimization.** If your code doesn't work without it, find the underlying problem and fix it first. Then you may add `memo` to improve performance."
+        },
+        {
+          "index": 2,
+          "chunkId": "9b3a130aa151e22d3b8534e2",
+          "docPath": "reference/react/memo.md",
+          "url": "https://react.dev/reference/react/memo",
+          "content": "`memo` lets you skip re-rendering a component when its props are unchanged.\n\n```\nconst MemoizedComponent = memo(SomeComponent, arePropsEqual?)\n```\n\n[React Compiler](/learn/react-compiler) automatically applies the equivalent of `memo` to all components, reducing the need for manual memoization. You can use the compiler to handle component memoization automatically.\n\n---"
+        },
+        {
+          "index": 3,
+          "chunkId": "05583fb2259e9bac90c47154",
+          "docPath": "reference/react/PureComponent.md",
+          "url": "https://react.dev/reference/react/PureComponent#usage",
+          "content": "## Usage\n\n\n\n### Skipping unnecessary re-renders for class components\n\nReact normally re-renders a component whenever its parent re-renders. As an optimization, you can create a component that React will not re-render when its parent re-renders so long as its new props and state are the same as the old props and state. [Class components](/reference/react/Component) can opt into this behavior by extending `PureComponent`:\n\n```js {1}\nclass Greeting extends PureComponent {\n  render() {\n    return <h1>Hello, {this.props.name}!</h1>;\n  }\n}\n```\n\nA React component should always have [pure rendering logic.](/learn/keeping-components-pure) This means that it must return the same output if its props, state, and context haven't changed. By using `PureComponent`, you are telling React that your component complies with this requirement, so React doesn't need to re-render as long as its props and state haven't changed. However, your component will still re-render if a context that it's using changes.\n\nIn this example, notice that the `Greeting` component re-renders whenever `name` is changed (because that's one of its props), but not when `address` is changed (because it's not passed to `Greeting` as a prop):\n\nWe recommend defining components as functions instead of classes. [See how to migrate.](#alternatives)\n\n---"
+        },
+        {
+          "index": 5,
+          "chunkId": "a5a478b9e059f3e6b50600c3",
+          "docPath": "reference/react/PureComponent.md",
+          "url": "https://react.dev/reference/react/PureComponent#reference",
+          "content": "## Reference\n\n\n\n### `PureComponent`\n\nTo skip re-rendering a class component for same props and state, extend `PureComponent` instead of [`Component`:](/reference/react/Component)\n\n```js\nimport { PureComponent } from 'react';\n\nclass Greeting extends PureComponent {\n  render() {\n    return <h1>Hello, {this.props.name}!</h1>;\n  }\n}\n```\n\n`PureComponent` is a subclass of `Component` and supports [all the `Component` APIs.](/reference/react/Component#reference) Extending `PureComponent` is equivalent to defining a custom [`shouldComponentUpdate`](/reference/react/Component#shouldcomponentupdate) method that shallowly compares props and state.\n\n[See more examples below.](#usage)\n\n---"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately describes using `memo` for functional components and `PureComponent` for class components to skip re-rendering when props have not changed, which is supported by passages [1], [2], [3], and [5].",
+        "correctness": "The answer correctly states that wrapping the component in memo returns a memoized version that skips re-rendering when props are unchanged, satisfying the acceptance criteria."
+      },
+      "latencyMs": 3058
+    },
+    {
+      "id": "q05",
+      "type": "factoid",
+      "language": "en",
+      "question": "What can I pass to the set function returned by useState?",
+      "systemAnswerable": true,
+      "answer": "You can pass the next state directly, or a function that calculates it from the previous state. If you pass a function, it will be treated as an updater function, which must be pure and take the pending state as its only argument, returning the next state. React will queue the updater function and re-render the component accordingly [1].",
+      "retrievedDocs": [
+        "reference/react/useState.md",
+        "reference/react/useState.md",
+        "learn/state-a-components-memory.md",
+        "reference/react/useState.md",
+        "reference/react/useState.md"
+      ],
+      "citedDocs": [
+        "reference/react/useState.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "5dcff5dae79ae681e37ef319",
+          "docPath": "reference/react/useState.md",
+          "url": "https://react.dev/reference/react/useState#setstate",
+          "content": "### `set` functions, like `setSomething(nextState)`\n\nThe `set` function returned by `useState` lets you update the state to a different value and trigger a re-render. You can pass the next state directly, or a function that calculates it from the previous state:\n\n```js\nconst [name, setName] = useState('Edward');\n\nfunction handleClick() {\n  setName('Taylor');\n  setAge(a => a + 1);\n  // ...\n```\n\n#### Parameters\n\n* `nextState`: The value that you want the state to be. It can be a value of any type, but there is a special behavior for functions.\n  * If you pass a function as `nextState`, it will be treated as an _updater function_. It must be pure, should take the pending state as its only argument, and should return the next state. React will put your updater function in a queue and re-render your component. During the next render, React will calculate the next state by applying all of the queued updaters to the previous state. [See an example below.](#updating-state-based-on-the-previous-state)\n\n#### Returns\n\n`set` functions do not have a return value."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "Every factual claim in the answer is directly supported by passage [1].",
+        "correctness": "The answer states that the set function accepts either the next state value directly or an updater function that receives the pending state and returns the next state, satisfying all acceptance criteria."
+      },
+      "latencyMs": 4281
+    },
+    {
+      "id": "q06",
+      "type": "factoid",
+      "language": "en",
+      "question": "What rules do keys need to follow when rendering lists in React?",
+      "systemAnswerable": true,
+      "answer": "Keys must be unique among siblings, and they must not change. It's okay to use the same keys for JSX nodes in different arrays. Additionally, keys should not be generated on the fly, as this will lead to issues with component identification and performance [1].",
+      "retrievedDocs": [
+        "learn/rendering-lists.md",
+        "learn/tutorial-tic-tac-toe.md",
+        "learn/describing-the-ui.md",
+        "learn/rendering-lists.md",
+        "learn/tutorial-tic-tac-toe.md"
+      ],
+      "citedDocs": [
+        "learn/rendering-lists.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "35bff07eb142c5f571a18624",
+          "docPath": "learn/rendering-lists.md",
+          "url": "https://react.dev/learn/rendering-lists#rules-of-keys",
+          "content": "### Rules of keys\n\n* **Keys must be unique among siblings.** However, it’s okay to use the same keys for JSX nodes in _different_ arrays.\n* **Keys must not change** or that defeats their purpose! Don't generate them while rendering.\n\n### Why does React need keys?\n\nImagine that files on your desktop didn't have names. Instead, you'd refer to them by their order -- the first file, the second file, and so on. You could get used to it, but once you delete a file, it would get confusing. The second file would become the first file, the third file would be the second file, and so on.\n\nFile names in a folder and JSX keys in an array serve a similar purpose. They let us uniquely identify an item between its siblings. A well-chosen key provides more information than the position within the array. Even if the _position_ changes due to reordering, the `key` lets React identify the item throughout its lifetime.\n\nYou might be tempted to use an item's index in the array as its key. In fact, that's what React will use if you don't specify a `key` at all. But the order in which you render items will change over time if an item is inserted, deleted, or if the array gets reordered. Index as a key often leads to subtle and confusing bugs.\n\nSimilarly, do not generate keys on the fly, e.g. with `key={Math.random()}`. This will cause keys to never match up between renders, leading to all your components and DOM being recreated every time. Not only is this slow, but it will also lose any user input inside the list items. Instead, use a stable ID based on the data.\n\nNote that your components won't receive `key` as a prop. It's only used as a hint by React itself. If your component needs an ID, you have to pass it as a separate prop: ``.\n\nOn this page you learned:\n\n* How to move data out of components and into data structures like arrays and objects.\n* How to generate sets of similar components with JavaScript's `map()`.\n* How to create arrays of filtered items with JavaScript's `filter()`.\n* Why and how to set `key` on each component in a collection so React can keep track of each of them even if their position or data changes."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "All factual claims in the answer are directly supported by the passages. The rules about keys being unique among siblings, not changing, being okay to use the same keys in different arrays, and not generating keys on the fly are all mentioned in [1].",
+        "correctness": "The answer satisfies all requirements: it states that keys must be unique among siblings, must not change, and should not be generated during render."
+      },
+      "latencyMs": 2429
+    },
+    {
+      "id": "q07",
+      "type": "factoid",
+      "language": "en",
+      "question": "What extra checks does Strict Mode enable in development?",
+      "systemAnswerable": true,
+      "answer": "Strict Mode enables the following extra checks in development:\n\n1. Components will re-render an extra time to find bugs caused by impure rendering.\n2. Effects will re-run an extra time to find bugs caused by missing Effect cleanup.\n3. Refs callbacks will re-run an extra time to find bugs caused by missing ref cleanup.\n4. Components will be checked for usage of deprecated APIs [1].",
+      "retrievedDocs": [
+        "reference/react/StrictMode.md",
+        "reference/react/StrictMode.md",
+        "learn/synchronizing-with-effects.md",
+        "reference/react/StrictMode.md",
+        "reference/react/useEffect.md"
+      ],
+      "citedDocs": [
+        "reference/react/StrictMode.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "569d7416ea0a614719a5aa99",
+          "docPath": "reference/react/StrictMode.md",
+          "url": "https://react.dev/reference/react/StrictMode#reference",
+          "content": "## Reference\n\n\n\n### `<StrictMode>`\n\nUse `StrictMode` to enable additional development behaviors and warnings for the component tree inside:\n\n```js\nimport { StrictMode } from 'react';\nimport { createRoot } from 'react-dom/client';\n\nconst root = createRoot(document.getElementById('root'));\nroot.render(\n\n);\n```\n\n[See more examples below.](#usage)\n\nStrict Mode enables the following development-only behaviors:\n\n- Your components will [re-render an extra time](#fixing-bugs-found-by-double-rendering-in-development) to find bugs caused by impure rendering.\n- Your components will [re-run Effects an extra time](#fixing-bugs-found-by-re-running-effects-in-development) to find bugs caused by missing Effect cleanup.\n- Your components will [re-run refs callbacks an extra time](#fixing-bugs-found-by-re-running-ref-callbacks-in-development) to find bugs caused by missing ref cleanup.\n- Your components will [be checked for usage of deprecated APIs.](#fixing-deprecation-warnings-enabled-by-strict-mode)\n\n#### Props\n\n`StrictMode` accepts no props.\n\n#### Caveats\n\n* There is no way to opt out of Strict Mode inside a tree wrapped in `<StrictMode>`. This gives you confidence that all components inside `<StrictMode>` are checked. If two teams working on a product disagree whether they find the checks valuable, they need to either reach consensus or move `<StrictMode>` down in the tree.\n\n---"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "All factual claims in the answer are directly supported by the cited passage [1].",
+        "correctness": "The answer mentions development-only behaviors such as double rendering to find impure rendering, re-running effects an extra time, and warnings for deprecated APIs, satisfying the acceptance criteria."
+      },
+      "latencyMs": 3053
+    },
+    {
+      "id": "q08",
+      "type": "factoid",
+      "language": "en",
+      "question": "What is useId for, and what should it not be used for?",
+      "systemAnswerable": true,
+      "answer": "`useId` is a React Hook for generating unique IDs that can be passed to accessibility attributes [1]. It should not be used to generate cache keys for `use()` [2], keys in a list [3], or in async Server Components [2].",
+      "retrievedDocs": [
+        "reference/react/useId.md",
+        "reference/react/useId.md",
+        "reference/react/useId.md",
+        "reference/react/useId.md",
+        "reference/react/useId.md"
+      ],
+      "citedDocs": [
+        "reference/react/useId.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "8c866124635fe327dde6d377",
+          "docPath": "reference/react/useId.md",
+          "url": "https://react.dev/reference/react/useId",
+          "content": "`useId` is a React Hook for generating unique IDs that can be passed to accessibility attributes.\n\n```js\nconst id = useId()\n```\n\n---"
+        },
+        {
+          "index": 2,
+          "chunkId": "450c2efd0128bc436de4169f",
+          "docPath": "reference/react/useId.md",
+          "url": "https://react.dev/reference/react/useId#reference",
+          "content": "## Reference\n\n\n\n### `useId()`\n\nCall `useId` at the top level of your component to generate a unique ID:\n\n```js\nimport { useId } from 'react';\n\nfunction PasswordField() {\n  const passwordHintId = useId();\n  // ...\n```\n\n[See more examples below.](#usage)\n\n#### Parameters\n\n`useId` does not take any parameters.\n\n#### Returns\n\n`useId` returns a unique ID string associated with this particular `useId` call in this particular component.\n\n#### Caveats\n\n* `useId` is a Hook, so you can only call it **at the top level of your component** or your own Hooks. You can't call it inside loops or conditions. If you need that, extract a new component and move the state into it.\n\n* `useId` **should not be used to generate cache keys** for [use()](/reference/react/use). The ID is stable when a component is mounted but may change during rendering. Cache keys should be generated from your data.\n\n* `useId` **should not be used to generate keys** in a list. [Keys should be generated from your data.](/learn/rendering-lists#where-to-get-your-key)\n\n* `useId` currently cannot be used in [async Server Components](/reference/rsc/server-components#async-components-with-server-components).\n\n---"
+        },
+        {
+          "index": 3,
+          "chunkId": "3886dbd62bd6e8baba405e49",
+          "docPath": "reference/react/useId.md",
+          "url": "https://react.dev/reference/react/useId#usage",
+          "content": "## Usage\n\n**Do not call `useId` to generate keys in a list.** [Keys should be generated from your data.](/learn/rendering-lists#where-to-get-your-key)"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "Every factual claim in the answer is directly supported by the passages. The use of `useId` for generating unique IDs for accessibility attributes is supported by [1]. The restrictions on not using it for cache keys, list keys, and in async Server Components are supported by [2] and [3].",
+        "correctness": "The answer states that useId generates unique IDs for accessibility attributes and that it should not be used for generating keys in a list, satisfying all acceptance criteria."
+      },
+      "latencyMs": 2008
+    },
+    {
+      "id": "q09",
+      "type": "factoid",
+      "language": "en",
+      "question": "Does updating a ref created with useRef trigger a re-render?",
+      "systemAnswerable": true,
+      "answer": "No, updating a ref created with useRef does not trigger a re-render [2][3][4].",
+      "retrievedDocs": [
+        "learn/escape-hatches.md",
+        "reference/react/useRef.md",
+        "reference/react/hooks.md",
+        "reference/react/useRef.md",
+        "learn/referencing-values-with-refs.md"
+      ],
+      "citedDocs": [
+        "reference/react/useRef.md",
+        "reference/react/hooks.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 2,
+          "chunkId": "e68c33fa4ed87ab84dc7e44f",
+          "docPath": "reference/react/useRef.md",
+          "url": "https://react.dev/reference/react/useRef#referencing-a-value-with-a-ref",
+          "content": "- You can **store information** between re-renders (unlike regular variables, which reset on every render).\n- Changing it **does not trigger a re-render** (unlike state variables, which trigger a re-render).\n- The **information is local** to each copy of your component (unlike the variables outside, which are shared).\n\nChanging a ref does not trigger a re-render, so refs are not appropriate for storing information you want to display on the screen. Use state for that instead. Read more about [choosing between `useRef` and `useState`.](/learn/referencing-values-with-refs#differences-between-refs-and-state)"
+        },
+        {
+          "index": 3,
+          "chunkId": "bc6a3e6e5339937839b4bb8c",
+          "docPath": "reference/react/hooks.md",
+          "url": "https://react.dev/reference/react/hooks#ref-hooks",
+          "content": "## Ref Hooks\n\n*Refs* let a component [hold some information that isn't used for rendering,](/learn/referencing-values-with-refs) like a DOM node or a timeout ID. Unlike with state, updating a ref does not re-render your component. Refs are an \"escape hatch\" from the React paradigm. They are useful when you need to work with non-React systems, such as the built-in browser APIs.\n\n* [`useRef`](/reference/react/useRef) declares a ref. You can hold any value in it, but most often it's used to hold a DOM node.\n* [`useImperativeHandle`](/reference/react/useImperativeHandle) lets you customize the ref exposed by your component. This is rarely used.\n\n```js\nfunction Form() {\n  const inputRef = useRef(null);\n  // ...\n```\n\n---"
+        },
+        {
+          "index": 4,
+          "chunkId": "9488ae444c3d4cbcb8c4fff3",
+          "docPath": "reference/react/useRef.md",
+          "url": "https://react.dev/reference/react/useRef#referencing-a-value-with-a-ref",
+          "content": "### Referencing a value with a ref\n\nCall `useRef` at the top level of your component to declare one or more [refs.](/learn/referencing-values-with-refs)\n\n```js [[1, 4, \"intervalRef\"], [3, 4, \"0\"]]\nimport { useRef } from 'react';\n\nfunction Stopwatch() {\n  const intervalRef = useRef(0);\n  // ...\n```\n\n`useRef` returns a <CodeStep step={1}>ref object</CodeStep> with a single <CodeStep step={2}>`current` property</CodeStep> initially set to the <CodeStep step={3}>initial value</CodeStep> you provided.\n\nOn the next renders, `useRef` will return the same object. You can change its `current` property to store information and read it later. This might remind you of [state](/reference/react/useState), but there is an important difference.\n\n**Changing a ref does not trigger a re-render.** This means refs are perfect for storing information that doesn't affect the visual output of your component. For example, if you need to store an [interval ID](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) and retrieve it later, you can put it in a ref. To update the value inside the ref, you need to manually change its <CodeStep step={2}>`current` property</CodeStep>:\n\n```js [[2, 5, \"intervalRef.current\"]]\nfunction handleStartClick() {\n  const intervalId = setInterval(() => {\n    // ...\n  }, 1000);\n  intervalRef.current = intervalId;\n}\n```\n\nLater, you can read that interval ID from the ref so that you can call [clear that interval](https://developer.mozilla.org/en-US/docs/Web/API/clearInterval):\n\n```js [[2, 2, \"intervalRef.current\"]]\nfunction handleStopClick() {\n  const intervalId = intervalRef.current;\n  clearInterval(intervalId);\n}\n```\n\nBy using a ref, you ensure that:\n\n- You can **store information** between re-renders (unlike regular variables, which reset on every render).\n- Changing it **does not trigger a re-render** (unlike state variables, which trigger a re-render).\n- The **information is local** to each copy of your component (unlike the variables outside, which are shared)."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 0,
+        "reciprocalRank": 0.5,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 0.5
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer is fully supported by the passages. All cited passages [2], [3], and [4] confirm that updating a ref created with useRef does not trigger a re-render.",
+        "correctness": "The answer correctly states that updating a ref does not trigger a re-render but does not mention that useRef returns an object with a single current property."
+      },
+      "latencyMs": 1855
+    },
+    {
+      "id": "q10",
+      "type": "factoid",
+      "language": "ko",
+      "question": "useContext는 무엇을 반환해?",
+      "systemAnswerable": true,
+      "answer": "`useContext`는 호출하는 컴포넌트에 대한 컨텍스트 값을 반환합니다. 이 값은 호출하는 컴포넌트 위에 있는 가장 가까운 컨텍스트 제공자가 전달한 `value`로 결정됩니다. 만약 그러한 제공자가 없다면, 반환된 값은 `createContext`에 전달한 `defaultValue`가 됩니다. 반환된 값은 항상 최신 상태입니다. [1]",
+      "retrievedDocs": [
+        "reference/react/useContext.md",
+        "reference/react/useContext.md",
+        "reference/react/useContext.md",
+        "reference/react/hooks.md",
+        "learn/typescript.md"
+      ],
+      "citedDocs": [
+        "reference/react/useContext.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "9038f3f20d1b1a75d20bf19c",
+          "docPath": "reference/react/useContext.md",
+          "url": "https://react.dev/reference/react/useContext#reference",
+          "content": "## Reference\n\n\n\n### `useContext(SomeContext)`\n\nCall `useContext` at the top level of your component to read and subscribe to [context.](/learn/passing-data-deeply-with-context)\n\n```js\nimport { useContext } from 'react';\n\nfunction MyComponent() {\n  const theme = useContext(ThemeContext);\n  // ...\n```\n\n[See more examples below.](#usage)\n\n#### Parameters\n\n* `SomeContext`: The context that you've previously created with [`createContext`](/reference/react/createContext). The context itself does not hold the information, it only represents the kind of information you can provide or read from components.\n\n#### Returns\n\n`useContext` returns the context value for the calling component. It is determined as the `value` passed to the closest `SomeContext` above the calling component in the tree. If there is no such provider, then the returned value will be the `defaultValue` you have passed to [`createContext`](/reference/react/createContext) for that context. The returned value is always up-to-date. React automatically re-renders components that read some context if it changes.\n\n#### Caveats\n\n* `useContext()` call in a component is not affected by providers returned from the *same* component. The corresponding `<Context>` **needs to be *above*** the component doing the `useContext()` call.\n* React **automatically re-renders** all the children that use a particular context starting from the provider that receives a different `value`. The previous and the next values are compared with the [`Object.is`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is) comparison. Skipping re-renders with [`memo`](/reference/react/memo) does not prevent the children receiving fresh context values.\n* If your build system produces duplicates modules in the output (which can happen with symlinks), this can break context. Passing something via context only works if `SomeContext` that you use to provide context and `SomeContext` that you use to read it are ***exactly* the same object**, as determined by a `===` comparison.\n\n---"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information in passage [1], stating that `useContext` returns the context value for the calling component, determined by the closest provider's `value` or the `defaultValue` if no provider exists. It also mentions that the returned value is always up-to-date, which is supported by the passage.",
+        "correctness": "The answer satisfies all requirements by stating that useContext returns the context value determined by the nearest matching context provider or the default value if no provider exists."
+      },
+      "latencyMs": 2493
+    },
+    {
+      "id": "q11",
+      "type": "summary",
+      "language": "en",
+      "question": "Summarize the differences between useEffect and useLayoutEffect, and which one the docs recommend by default.",
+      "systemAnswerable": true,
+      "answer": "`useEffect` is a React Hook that allows you to synchronize a component with an external system and does not block the browser from repainting the screen. It is recommended to use `useEffect` by default when possible, as `useLayoutEffect` can hurt performance by blocking the browser from repainting [1][3][5].\n\nOn the other hand, `useLayoutEffect` fires before the browser repaints the screen and blocks the browser from painting, which can be useful for certain visual updates, but it may lead to performance issues if overused [1][2].",
+      "retrievedDocs": [
+        "reference/react/useLayoutEffect.md",
+        "reference/react/useLayoutEffect.md",
+        "reference/react/useEffect.md",
+        "reference/react/useEffect.md",
+        "reference/react/useEffect.md"
+      ],
+      "citedDocs": [
+        "reference/react/useLayoutEffect.md",
+        "reference/react/useEffect.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "7834b3cc8af01cc9e317a642",
+          "docPath": "reference/react/useLayoutEffect.md",
+          "url": "https://react.dev/reference/react/useLayoutEffect",
+          "content": "`useLayoutEffect` can hurt performance. Prefer [`useEffect`](/reference/react/useEffect) when possible.\n\n`useLayoutEffect` is a version of [`useEffect`](/reference/react/useEffect) that fires before the browser repaints the screen.\n\n```js\nuseLayoutEffect(setup, dependencies?)\n```\n\n---"
+        },
+        {
+          "index": 3,
+          "chunkId": "2fb10616f2c708927665e1e0",
+          "docPath": "reference/react/useEffect.md",
+          "url": "https://react.dev/reference/react/useEffect#caveats",
+          "content": "#### Caveats\n\n* `useEffect` is a Hook, so you can only call it **at the top level of your component** or your own Hooks. You can't call it inside loops or conditions. If you need that, extract a new component and move the state into it.\n\n* If you're **not trying to synchronize with some external system,** [you probably don't need an Effect.](/learn/you-might-not-need-an-effect)\n\n* When Strict Mode is on, React will **run one extra development-only setup+cleanup cycle** before the first real setup. This is a stress-test that ensures that your cleanup logic \"mirrors\" your setup logic and that it stops or undoes whatever the setup is doing. If this causes a problem, [implement the cleanup function.](/learn/synchronizing-with-effects#how-to-handle-the-effect-firing-twice-in-development)\n\n* If some of your dependencies are objects or functions defined inside the component, there is a risk that they will **cause the Effect to re-run more often than needed.** To fix this, remove unnecessary [object](#removing-unnecessary-object-dependencies) and [function](#removing-unnecessary-function-dependencies) dependencies. You can also [extract state updates](#updating-state-based-on-previous-state-from-an-effect) and [non-reactive logic](#reading-the-latest-props-and-state-from-an-effect) outside of your Effect.\n\n* If your Effect wasn't caused by an interaction (like a click), React will generally let the browser **paint the updated screen first before running your Effect.** If your Effect is doing something visual (for example, positioning a tooltip), and the delay is noticeable (for example, it flickers), replace `useEffect` with [`useLayoutEffect`.](/reference/react/useLayoutEffect)\n\n* If your Effect is caused by an interaction (like a click), **React may run your Effect before the browser paints the updated screen**. This ensures that the result of the Effect can be observed by the event system. Usually, this works as expected. However, if you must defer the work until after paint, such as an `alert()`, you can use `setTimeout`. See [reactwg/react-18/128](https://github.com/reactwg/react-18/discussions/128) for more information."
+        },
+        {
+          "index": 5,
+          "chunkId": "c1fda15c67e47bd447a9232c",
+          "docPath": "reference/react/useEffect.md",
+          "url": "https://react.dev/reference/react/useEffect",
+          "content": "`useEffect` is a React Hook that lets you [synchronize a component with an external system.](/learn/synchronizing-with-effects)\n\n```js\nuseEffect(setup, dependencies?)\n```\n\n---"
+        },
+        {
+          "index": 2,
+          "chunkId": "4e2b3e8a3e0b0c101885e7d8",
+          "docPath": "reference/react/useLayoutEffect.md",
+          "url": "https://react.dev/reference/react/useLayoutEffect#uselayouteffect-blocks-the-browser-from-repainting",
+          "content": "#### `useLayoutEffect` blocks the browser from repainting\n\nReact guarantees that the code inside `useLayoutEffect` and any state updates scheduled inside it will be processed **before the browser repaints the screen.** This lets you render the tooltip, measure it, and re-render the tooltip again without the user noticing the first extra render. In other words, `useLayoutEffect` blocks the browser from painting.\n\n#### `useEffect` does not block the browser\n\nHere is the same example, but with [`useEffect`](/reference/react/useEffect) instead of `useLayoutEffect`. If you're on a slower device, you might notice that sometimes the tooltip \"flickers\" and you briefly see its initial position before the corrected position.\n\nTo make the bug easier to reproduce, this version adds an artificial delay during rendering. React will let the browser paint the screen before it processes the state update inside `useEffect`. As a result, the tooltip flickers:\n\nEdit this example to `useLayoutEffect` and observe that it blocks the paint even if rendering is slowed down.\n\nRendering in two passes and blocking the browser hurts performance. Try to avoid this when you can.\n\n---"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "All factual claims in the answer are directly supported by the passages. The differences between useEffect and useLayoutEffect, as well as the recommendation to use useEffect by default, are accurately reflected in the cited passages.",
+        "correctness": "The answer correctly mentions that useLayoutEffect fires before the browser repaints the screen while useEffect does not block painting, that useLayoutEffect can hurt performance, and that useEffect is preferred when possible."
+      },
+      "latencyMs": 2960
+    },
+    {
+      "id": "q12",
+      "type": "summary",
+      "language": "en",
+      "question": "Summarize the step-by-step process the docs recommend in 'Thinking in React'.",
+      "systemAnswerable": true,
+      "answer": "The step-by-step process recommended in 'Thinking in React' is as follows:\n\n1. **Identify** your component's different visual states.\n2. **Determine** what triggers those state changes.\n3. **Represent** the state in memory using `useState`.\n4. **Remove** any non-essential state variables.\n5. **Connect** the event handlers to set the state [1].",
+      "retrievedDocs": [
+        "learn/reacting-to-input-with-state.md",
+        "learn/thinking-in-react.md",
+        "learn/thinking-in-react.md",
+        "learn/thinking-in-react.md",
+        "learn/thinking-in-react.md"
+      ],
+      "citedDocs": [
+        "learn/reacting-to-input-with-state.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "3322df1139f8a38a2c11ba5f",
+          "docPath": "learn/reacting-to-input-with-state.md",
+          "url": "https://react.dev/learn/reacting-to-input-with-state#thinking-about-ui-declaratively",
+          "content": "## Thinking about UI declaratively\n\nYou've seen how to implement a form imperatively above. To better understand how to think in React, you'll walk through reimplementing this UI in React below:\n\n1. **Identify** your component's different visual states\n2. **Determine** what triggers those state changes\n3. **Represent** the state in memory using `useState`\n4. **Remove** any non-essential state variables\n5. **Connect** the event handlers to set the state\n\n### Step 1: Identify your component's different visual states\n\nIn computer science, you may hear about a [\"state machine\"](https://en.wikipedia.org/wiki/Finite-state_machine) being in one of several “states”. If you work with a designer, you may have seen mockups for different \"visual states\". React stands at the intersection of design and computer science, so both of these ideas are sources of inspiration.\n\nFirst, you need to visualize all the different \"states\" of the UI the user might see:\n\n* **Empty**: Form has a disabled \"Submit\" button.\n* **Typing**: Form has an enabled \"Submit\" button.\n* **Submitting**: Form is completely disabled. Spinner is shown.\n* **Success**: \"Thank you\" message is shown instead of a form.\n* **Error**: Same as Typing state, but with an extra error message.\n\nJust like a designer, you'll want to \"mock up\" or create \"mocks\" for the different states before you add logic. For example, here is a mock for just the visual part of the form. This mock is controlled by a prop called `status` with a default value of `'empty'`:\n\nYou could call that prop anything you like, the naming is not important. Try editing `status = 'empty'` to `status = 'success'` to see the success message appear. Mocking lets you quickly iterate on the UI before you wire up any logic. Here is a more fleshed out prototype of the same component, still \"controlled\" by the `status` prop:\n\n#### Displaying many visual states at once\n\nIf a component has a lot of visual states, it can be convenient to show them all on one page:\n\nPages like this are often called \"living styleguides\" or \"storybooks\"."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 0.5,
+        "citationPrecision": 0,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 0
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately lists the steps as described in the cited passage [1].",
+        "correctness": "The answer does not cover the five steps in order as required by the criteria. It provides a different set of steps not aligned with the specified process."
+      },
+      "latencyMs": 2767
+    },
+    {
+      "id": "q13",
+      "type": "summary",
+      "language": "en",
+      "question": "Summarize how React decides when component state is preserved versus reset between re-renders.",
+      "systemAnswerable": true,
+      "answer": "React preserves a component's state when it remains at the same position in the render tree. If the component is removed or a different component is rendered at that position, React resets the state. Additionally, you can force a component to reset its state by providing it a different `key`, indicating that it should be treated as a different component that needs to be re-created from scratch [1][2][5].",
+      "retrievedDocs": [
+        "learn/managing-state.md",
+        "learn/preserving-and-resetting-state.md",
+        "learn/preserving-and-resetting-state.md",
+        "learn/preserving-and-resetting-state.md",
+        "learn/preserving-and-resetting-state.md"
+      ],
+      "citedDocs": [
+        "learn/managing-state.md",
+        "learn/preserving-and-resetting-state.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "2f2caa49f670800e2293b304",
+          "docPath": "learn/managing-state.md",
+          "url": "https://react.dev/learn/managing-state#preserving-and-resetting-state",
+          "content": "## Preserving and resetting state\n\nWhen you re-render a component, React needs to decide which parts of the tree to keep (and update), and which parts to discard or re-create from scratch. In most cases, React's automatic behavior works well enough. By default, React preserves the parts of the tree that \"match up\" with the previously rendered component tree.\n\nHowever, sometimes this is not what you want. In this chat app, typing a message and then switching the recipient does not reset the input. This can make the user accidentally send a message to the wrong person:\n\nReact lets you override the default behavior, and *force* a component to reset its state by passing it a different `key`, like ``. This tells React that if the recipient is different, it should be considered a *different* `Chat` component that needs to be re-created from scratch with the new data (and UI like inputs). Now switching between the recipients resets the input field--even though you render the same component.\n\nRead **[Preserving and Resetting State](/learn/preserving-and-resetting-state)** to learn the lifetime of state and how to control it."
+        },
+        {
+          "index": 2,
+          "chunkId": "526cb9e0b977bc543fcc850d",
+          "docPath": "learn/preserving-and-resetting-state.md",
+          "url": "https://react.dev/learn/preserving-and-resetting-state",
+          "content": "State is isolated between components. React keeps track of which state belongs to which component based on their place in the UI tree. You can control when to preserve state and when to reset it between re-renders.\n\n* When React chooses to preserve or reset the state\n* How to force React to reset component's state\n* How keys and types affect whether the state is preserved"
+        },
+        {
+          "index": 5,
+          "chunkId": "9d969fdf7ca95af3c7a44ee0",
+          "docPath": "learn/preserving-and-resetting-state.md",
+          "url": "https://react.dev/learn/preserving-and-resetting-state#state-is-tied-to-a-position-in-the-tree",
+          "content": "## State is tied to a position in the render tree\n\nReact builds [render trees](learn/understanding-your-ui-as-a-tree#the-render-tree) for the component structure in your UI.\n\nWhen you give a component state, you might think the state \"lives\" inside the component. But the state is actually held inside React. React associates each piece of state it's holding with the correct component by where that component sits in the render tree.\n\nHere, there is only one `` JSX tag, but it's rendered at two different positions:\n\nHere's how these look as a tree:\n\nReact tree\n\n**These are two separate counters because each is rendered at its own position in the tree.** You don't usually have to think about these positions to use React, but it can be useful to understand how it works.\n\nIn React, each component on the screen has fully isolated state. For example, if you render two `Counter` components side by side, each of them will get its own, independent, `score` and `hover` states.\n\nTry clicking both counters and notice they don't affect each other:\n\nAs you can see, when one counter is updated, only the state for that component is updated:\n\nUpdating state\n\nReact will keep the state around for as long as you render the same component at the same position in the tree. To see this, increment both counters, then remove the second component by unchecking \"Render the second counter\" checkbox, and then add it back by ticking it again:\n\nNotice how the moment you stop rendering the second counter, its state disappears completely. That's because when React removes a component, it destroys its state.\n\nDeleting a component\n\nWhen you tick \"Render the second counter\", a second `Counter` and its state are initialized from scratch (`score = 0`) and added to the DOM.\n\nAdding a component\n\n**React preserves a component's state for as long as it's being rendered at its position in the UI tree.** If it gets removed, or a different component gets rendered at the same position, React discards its state."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 0.5,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information in the passages: React preserves state based on the component's position in the render tree, resets state when a component is removed or replaced, and allows forced state reset using keys. All claims are supported by the cited passages.",
+        "correctness": "The answer satisfies all the acceptance criteria by mentioning that state is tied to the position in the render tree, that the same component at the same position preserves state, that a different component or position resets it, and that passing a different key resets state."
+      },
+      "latencyMs": 2599
+    },
+    {
+      "id": "q14",
+      "type": "summary",
+      "language": "en",
+      "question": "Summarize the principles the docs give for structuring state.",
+      "systemAnswerable": true,
+      "answer": "The principles for structuring state are:\n\n1. **Group related state**: Merge state variables that are always updated together into a single state variable.\n2. **Avoid contradictions in state**: Ensure that state variables do not contradict each other to prevent mistakes.\n3. **Avoid redundant state**: Do not store information that can be calculated from props or existing state.\n4. **Avoid duplication in state**: Minimize duplicated data across state variables to keep them in sync.\n5. **Avoid deeply nested state**: Prefer a flat structure for state to simplify updates.\n\nThese principles aim to make state easy to update without introducing mistakes [1].",
+      "retrievedDocs": [
+        "learn/choosing-the-state-structure.md",
+        "learn/managing-state.md",
+        "learn/choosing-the-state-structure.md",
+        "learn/thinking-in-react.md",
+        "learn/choosing-the-state-structure.md"
+      ],
+      "citedDocs": [
+        "learn/choosing-the-state-structure.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "58c7cce8b45f077b4ce4c2ce",
+          "docPath": "learn/choosing-the-state-structure.md",
+          "url": "https://react.dev/learn/choosing-the-state-structure#principles-for-structuring-state",
+          "content": "## Principles for structuring state\n\nWhen you write a component that holds some state, you'll have to make choices about how many state variables to use and what the shape of their data should be. While it's possible to write correct programs even with a suboptimal state structure, there are a few principles that can guide you to make better choices:\n\n1. **Group related state.** If you always update two or more state variables at the same time, consider merging them into a single state variable.\n2. **Avoid contradictions in state.** When the state is structured in a way that several pieces of state may contradict and \"disagree\" with each other, you leave room for mistakes. Try to avoid this.\n3. **Avoid redundant state.** If you can calculate some information from the component's props or its existing state variables during rendering, you should not put that information into that component's state.\n4. **Avoid duplication in state.** When the same data is duplicated between multiple state variables, or within nested objects, it is difficult to keep them in sync. Reduce duplication when you can.\n5. **Avoid deeply nested state.** Deeply hierarchical state is not very convenient to update. When possible, prefer to structure state in a flat way.\n\nThe goal behind these principles is to *make state easy to update without introducing mistakes*. Removing redundant and duplicate data from state helps ensure that all its pieces stay in sync. This is similar to how a database engineer might want to [\"normalize\" the database structure](https://docs.microsoft.com/en-us/office/troubleshoot/access/database-normalization-description) to reduce the chance of bugs. To paraphrase Albert Einstein, **\"Make your state as simple as it can be--but no simpler.\"**\n\nNow let's see how these principles apply in action."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "Every factual claim in the answer is directly supported by the cited passage [1].",
+        "correctness": "The answer mentions all the required principles: group related state, avoid contradictions in state, avoid redundant state, avoid duplication, and avoid deeply nested state."
+      },
+      "latencyMs": 3096
+    },
+    {
+      "id": "q15",
+      "type": "summary",
+      "language": "en",
+      "question": "According to 'You Might Not Need an Effect', in which situations should I NOT use an Effect?",
+      "systemAnswerable": true,
+      "answer": "You should NOT use an Effect in the following situations:\n\n1. When you want to transform data for rendering.\n2. When you want to handle user events.\n\nIn these cases, you can manage state directly during rendering or in event handlers without needing an Effect [1][3].",
+      "retrievedDocs": [
+        "learn/escape-hatches.md",
+        "learn/synchronizing-with-effects.md",
+        "learn/you-might-not-need-an-effect.md",
+        "learn/you-might-not-need-an-effect.md",
+        "reference/react/useEffect.md"
+      ],
+      "citedDocs": [
+        "learn/escape-hatches.md",
+        "learn/you-might-not-need-an-effect.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "b3e26a93490e72425b61b789",
+          "docPath": "learn/escape-hatches.md",
+          "url": "https://react.dev/learn/escape-hatches#you-might-not-need-an-effect",
+          "content": "## You Might Not Need An Effect\n\nEffects are an escape hatch from the React paradigm. They let you \"step outside\" of React and synchronize your components with some external system. If there is no external system involved (for example, if you want to update a component's state when some props or state change), you shouldn't need an Effect. Removing unnecessary Effects will make your code easier to follow, faster to run, and less error-prone.\n\nThere are two common cases in which you don't need Effects:\n- **You don't need Effects to transform data for rendering.**\n- **You don't need Effects to handle user events.**\n\nFor example, you don't need an Effect to adjust some state based on other state:\n\n```js {expectedErrors: {'react-compiler': [8]}} {5-9}\nfunction Form() {\n  const [firstName, setFirstName] = useState('Taylor');\n  const [lastName, setLastName] = useState('Swift');\n\n  // 🔴 Avoid: redundant state and unnecessary Effect\n  const [fullName, setFullName] = useState('');\n  useEffect(() => {\n    setFullName(firstName + ' ' + lastName);\n  }, [firstName, lastName]);\n  // ...\n}\n```\n\nInstead, calculate as much as you can while rendering:\n\n```js {4-5}\nfunction Form() {\n  const [firstName, setFirstName] = useState('Taylor');\n  const [lastName, setLastName] = useState('Swift');\n  // ✅ Good: calculated during rendering\n  const fullName = firstName + ' ' + lastName;\n  // ...\n}\n```\n\nHowever, you *do* need Effects to synchronize with external systems.\n\nRead **[You Might Not Need an Effect](/learn/you-might-not-need-an-effect)** to learn how to remove unnecessary Effects."
+        },
+        {
+          "index": 3,
+          "chunkId": "2e4519887b561ea1455abd24",
+          "docPath": "learn/you-might-not-need-an-effect.md",
+          "url": "https://react.dev/learn/you-might-not-need-an-effect#how-to-remove-unnecessary-effects",
+          "content": "## How to remove unnecessary Effects\n\nThere are two common cases in which you don't need Effects:\n\n* **You don't need Effects to transform data for rendering.** For example, let's say you want to filter a list before displaying it. You might feel tempted to write an Effect that updates a state variable when the list changes. However, this is inefficient. When you update the state, React will first call your component functions to calculate what should be on the screen. Then React will [\"commit\"](/learn/render-and-commit) these changes to the DOM, updating the screen. Then React will run your Effects. If your Effect *also* immediately updates the state, this restarts the whole process from scratch! To avoid the unnecessary render passes, transform all the data at the top level of your components. That code will automatically re-run whenever your props or state change.\n* **You don't need Effects to handle user events.** For example, let's say you want to send an `/api/buy` POST request and show a notification when the user buys a product. In the Buy button click event handler, you know exactly what happened. By the time an Effect runs, you don't know *what* the user did (for example, which button was clicked). This is why you'll usually handle user events in the corresponding event handlers.\n\nYou *do* need Effects to [synchronize](/learn/synchronizing-with-effects#what-are-effects-and-how-are-they-different-from-events) with external systems. For example, you can write an Effect that keeps a jQuery widget synchronized with the React state. You can also fetch data with Effects: for example, you can synchronize the search results with the current search query. Keep in mind that modern [frameworks](/learn/creating-a-react-app#full-stack-frameworks) provide more efficient built-in data fetching mechanisms than writing Effects directly in your components.\n\nTo help you gain the right intuition, let's look at some common concrete examples!"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 0.3333333333333333,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information in the passages. It states that Effects are not needed for transforming data for rendering or handling user events, which is supported by both passages [1] and [3].",
+        "correctness": "The answer mentions two cases where an Effect should not be used: transforming data for rendering and handling user events, satisfying the acceptance criteria."
+      },
+      "latencyMs": 1869
+    },
+    {
+      "id": "q16",
+      "type": "reasoning",
+      "language": "en",
+      "question": "I call setNumber(number + 1) three times in one click handler but the number only increases by one. Why, and how do I fix it?",
+      "systemAnswerable": true,
+      "answer": "When you call `setNumber(number + 1)` three times in one click handler, the state variable `number` is fixed at its value during that render, which is `0`. Therefore, each call effectively sets the state to `1`, resulting in the number only increasing by one after the handler completes [1][4]. \n\nTo fix this, you should use an updater function like `setNumber(n => n + 1)`. This allows React to calculate the next state based on the previous state, enabling the counter to increment correctly [2][3][5].",
+      "retrievedDocs": [
+        "learn/state-as-a-snapshot.md",
+        "reference/react/useState.md",
+        "learn/queueing-a-series-of-state-updates.md",
+        "learn/queueing-a-series-of-state-updates.md",
+        "learn/adding-interactivity.md"
+      ],
+      "citedDocs": [
+        "learn/state-as-a-snapshot.md",
+        "learn/queueing-a-series-of-state-updates.md",
+        "reference/react/useState.md",
+        "learn/adding-interactivity.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "6072d52b21c559b521383e31",
+          "docPath": "learn/state-as-a-snapshot.md",
+          "url": "https://react.dev/learn/state-as-a-snapshot#rendering-takes-a-snapshot-in-time",
+          "content": "Here is what this button's click handler tells React to do:\n\n1. `setNumber(number + 1)`: `number` is `0` so `setNumber(0 + 1)`.\n    - React prepares to change `number` to `1` on the next render.\n2. `setNumber(number + 1)`: `number` is `0` so `setNumber(0 + 1)`.\n    - React prepares to change `number` to `1` on the next render.\n3. `setNumber(number + 1)`: `number` is `0` so `setNumber(0 + 1)`.\n    - React prepares to change `number` to `1` on the next render.\n\nEven though you called `setNumber(number + 1)` three times, in *this render's* event handler `number` is always `0`, so you set the state to `1` three times. This is why, after your event handler finishes, React re-renders the component with `number` equal to `1` rather than `3`.\n\nYou can also visualize this by mentally substituting state variables with their values in your code. Since the `number` state variable is `0` for *this render*, its event handler looks like this:\n\n```js\n<button onClick={() => {\n  setNumber(0 + 1);\n  setNumber(0 + 1);\n  setNumber(0 + 1);\n}}>+3</button>\n```\n\nFor the next render, `number` is `1`, so *that render's* click handler looks like this:\n\n```js\n<button onClick={() => {\n  setNumber(1 + 1);\n  setNumber(1 + 1);\n  setNumber(1 + 1);\n}}>+3</button>\n```\n\nThis is why clicking the button again will set the counter to `2`, then to `3` on the next click, and so on."
+        },
+        {
+          "index": 4,
+          "chunkId": "5d2a1bff41b97f940766eec2",
+          "docPath": "learn/queueing-a-series-of-state-updates.md",
+          "url": "https://react.dev/learn/queueing-a-series-of-state-updates#react-batches-state-updates",
+          "content": "## React batches state updates\n\nYou might expect that clicking the \"+3\" button will increment the counter three times because it calls `setNumber(number + 1)` three times:\n\nHowever, as you might recall from the previous section, [each render's state values are fixed](/learn/state-as-a-snapshot#rendering-takes-a-snapshot-in-time), so the value of `number` inside the first render's event handler is always `0`, no matter how many times you call `setNumber(1)`:\n\n```js\nsetNumber(0 + 1);\nsetNumber(0 + 1);\nsetNumber(0 + 1);\n```\n\nBut there is one other factor at play here. **React waits until *all* code in the event handlers has run before processing your state updates.** This is why the re-render only happens *after* all these `setNumber()` calls.\n\nThis might remind you of a waiter taking an order at the restaurant. A waiter doesn't run to the kitchen at the mention of your first dish! Instead, they let you finish your order, let you make changes to it, and even take orders from other people at the table.\n\nThis lets you update multiple state variables--even from multiple components--without triggering too many [re-renders.](/learn/render-and-commit#re-renders-when-state-updates) But this also means that the UI won't be updated until _after_ your event handler, and any code in it, completes. This behavior, also known as **batching,** makes your React app run much faster. It also avoids dealing with confusing \"half-finished\" renders where only some of the variables have been updated.\n\n**React does not batch across *multiple* intentional events like clicks**--each click is handled separately. Rest assured that React only does batching when it's generally safe to do. This ensures that, for example, if the first button click disables a form, the second click would not submit it again."
+        },
+        {
+          "index": 2,
+          "chunkId": "373567938c7322c27a459ddd",
+          "docPath": "reference/react/useState.md",
+          "url": "https://react.dev/reference/react/useState#updating-state-based-on-the-previous-state",
+          "content": "### Updating state based on the previous state\n\nSuppose the `age` is `42`. This handler calls `setAge(age + 1)` three times:\n\n```js\nfunction handleClick() {\n  setAge(age + 1); // setAge(42 + 1)\n  setAge(age + 1); // setAge(42 + 1)\n  setAge(age + 1); // setAge(42 + 1)\n}\n```\n\nHowever, after one click, `age` will only be `43` rather than `45`! This is because calling the `set` function [does not update](/learn/state-as-a-snapshot) the `age` state variable in the already running code. So each `setAge(age + 1)` call becomes `setAge(43)`.\n\nTo solve this problem, **you may pass an *updater function*** to `setAge` instead of the next state:\n\n```js [[1, 2, \"a\", 0], [2, 2, \"a + 1\"], [1, 3, \"a\", 0], [2, 3, \"a + 1\"], [1, 4, \"a\", 0], [2, 4, \"a + 1\"]]\nfunction handleClick() {\n  setAge(a => a + 1); // setAge(42 => 43)\n  setAge(a => a + 1); // setAge(43 => 44)\n  setAge(a => a + 1); // setAge(44 => 45)\n}\n```\n\nHere, `a => a + 1` is your updater function. It takes the <CodeStep step={1}>pending state</CodeStep> and calculates the <CodeStep step={2}>next state</CodeStep> from it.\n\nReact puts your updater functions in a [queue.](/learn/queueing-a-series-of-state-updates) Then, during the next render, it will call them in the same order:"
+        },
+        {
+          "index": 3,
+          "chunkId": "8c264c3c7b6f11135ee0a009",
+          "docPath": "learn/queueing-a-series-of-state-updates.md",
+          "url": "https://react.dev/learn/queueing-a-series-of-state-updates#updating-the-same-state-multiple-times-before-the-next-render",
+          "content": "## Updating the same state multiple times before the next render\n\nIt is an uncommon use case, but if you would like to update the same state variable multiple times before the next render, instead of passing the *next state value* like `setNumber(number + 1)`, you can pass a *function* that calculates the next state based on the previous one in the queue, like `setNumber(n => n + 1)`. It is a way to tell React to \"do something with the state value\" instead of just replacing it.\n\nTry incrementing the counter now:\n\nHere, `n => n + 1` is called an **updater function.** When you pass it to a state setter:\n\n1. React queues this function to be processed after all the other code in the event handler has run.\n2. During the next render, React goes through the queue and gives you the final updated state.\n\n```js\nsetNumber(n => n + 1);\nsetNumber(n => n + 1);\nsetNumber(n => n + 1);\n```\n\nHere's how React works through these lines of code while executing the event handler:\n\n1. `setNumber(n => n + 1)`: `n => n + 1` is a function. React adds it to a queue.\n1. `setNumber(n => n + 1)`: `n => n + 1` is a function. React adds it to a queue.\n1. `setNumber(n => n + 1)`: `n => n + 1` is a function. React adds it to a queue.\n\nWhen you call `useState` during the next render, React goes through the queue. The previous `number` state was `0`, so that's what React passes to the first updater function as the `n` argument. Then React takes the return value of your previous updater function and passes it to the next updater as `n`, and so on:\n\n|  queued update | `n` | returns |\n|--------------|---------|-----|\n| `n => n + 1` | `0` | `0 + 1 = 1` |\n| `n => n + 1` | `1` | `1 + 1 = 2` |\n| `n => n + 1` | `2` | `2 + 1 = 3` |"
+        },
+        {
+          "index": 5,
+          "chunkId": "4d99c8745c26774391790484",
+          "docPath": "learn/adding-interactivity.md",
+          "url": "https://react.dev/learn/adding-interactivity#queueing-a-series-of-state-updates",
+          "content": "## Queueing a series of state updates\n\nThis component is buggy: clicking \"+3\" increments the score only once.\n\n[State as a Snapshot](/learn/state-as-a-snapshot) explains why this is happening. Setting state requests a new re-render, but does not change it in the already running code. So `score` continues to be `0` right after you call `setScore(score + 1)`.\n\n```js\nconsole.log(score);  // 0\nsetScore(score + 1); // setScore(0 + 1);\nconsole.log(score);  // 0\nsetScore(score + 1); // setScore(0 + 1);\nconsole.log(score);  // 0\nsetScore(score + 1); // setScore(0 + 1);\nconsole.log(score);  // 0\n```\n\nYou can fix this by passing an *updater function* when setting state. Notice how replacing `setScore(score + 1)` with `setScore(s => s + 1)` fixes the \"+3\" button. This lets you queue multiple state updates.\n\nRead **[Queueing a Series of State Updates](/learn/queueing-a-series-of-state-updates)** to learn how to queue a sequence of state updates."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "Every factual claim in the answer is directly supported by the passages. The explanation of why the number only increases by one is supported by [1] and [4], and the solution using an updater function is supported by [2], [3], and [5].",
+        "correctness": "The answer explains that state is a snapshot fixed within a render and updates are batched, so all three calls use the same value. It also provides the correct fix by suggesting the use of an updater function."
+      },
+      "latencyMs": 2566
+    },
+    {
+      "id": "q17",
+      "type": "reasoning",
+      "language": "en",
+      "question": "My chat component's Effect re-connects to the server on every keystroke. Based on the docs, what is the likely cause and what are the suggested fixes?",
+      "systemAnswerable": true,
+      "answer": "The likely cause of the chat component's Effect reconnecting to the server on every keystroke is that the Effect does not have a dependency array, which leads to re-synchronization after every re-render. This means that the Effect is triggered by changes in any reactive value, including those that are not relevant to the connection, such as the input state [2].\n\nTo fix this issue, you should add a dependency array to the Effect and ensure that only the relevant reactive values are included. For example, `roomId` should be included in the array since it is reactive, while `serverUrl`, which is defined outside the component, does not need to be included [2]. Additionally, avoid using objects created during rendering as dependencies, as they can lead to unintended re-renders. Instead, create any necessary objects inside the Effect [4].",
+      "retrievedDocs": [
+        "learn/removing-effect-dependencies.md",
+        "learn/lifecycle-of-reactive-effects.md",
+        "learn/removing-effect-dependencies.md",
+        "reference/react/useEffect.md",
+        "learn/escape-hatches.md"
+      ],
+      "citedDocs": [
+        "learn/lifecycle-of-reactive-effects.md",
+        "reference/react/useEffect.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 2,
+          "chunkId": "0e6bfae302edba8caa8b5250",
+          "docPath": "learn/lifecycle-of-reactive-effects.md",
+          "url": "https://react.dev/learn/lifecycle-of-reactive-effects#fix-reconnecting-on-every-keystroke",
+          "content": "#### Fix reconnecting on every keystroke\n\nIn this example, the `ChatRoom` component connects to the chat room when the component mounts, disconnects when it unmounts, and reconnects when you select a different chat room. This behavior is correct, so you need to keep it working.\n\nHowever, there is a problem. Whenever you type into the message box input at the bottom, `ChatRoom` *also* reconnects to the chat. (You can notice this by clearing the console and typing into the input.) Fix the issue so that this doesn't happen.\n\nYou might need to add a dependency array for this Effect. What dependencies should be there?\n\nThis Effect didn't have a dependency array at all, so it re-synchronized after every re-render. First, add a dependency array. Then, make sure that every reactive value used by the Effect is specified in the array. For example, `roomId` is reactive (because it's a prop), so it should be included in the array. This ensures that when the user selects a different room, the chat reconnects. On the other hand, `serverUrl` is defined outside the component. This is why it doesn't need to be in the array."
+        },
+        {
+          "index": 4,
+          "chunkId": "115efda763930c591e219f3b",
+          "docPath": "reference/react/useEffect.md",
+          "url": "https://react.dev/reference/react/useEffect#removing-unnecessary-object-dependencies",
+          "content": "### Removing unnecessary object dependencies\n\nIf your Effect depends on an object or a function created during rendering, it might run too often. For example, this Effect re-connects after every commit because the `options` object is [different for every render:](/learn/removing-effect-dependencies#does-some-reactive-value-change-unintentionally)\n\n```js {6-9,12,15}\nconst serverUrl = 'https://localhost:1234';\n\nfunction ChatRoom({ roomId }) {\n  const [message, setMessage] = useState('');\n\n  const options = { // 🚩 This object is created from scratch on every re-render\n    serverUrl: serverUrl,\n    roomId: roomId\n  };\n\n  useEffect(() => {\n    const connection = createConnection(options); // It's used inside the Effect\n    connection.connect();\n    return () => connection.disconnect();\n  }, [options]); // 🚩 As a result, these dependencies are always different on a commit\n  // ...\n```\n\nAvoid using an object created during rendering as a dependency. Instead, create the object inside the Effect:\n\nNow that you create the `options` object inside the Effect, the Effect itself only depends on the `roomId` string.\n\nWith this fix, typing into the input doesn't reconnect the chat. Unlike an object which gets re-created, a string like `roomId` doesn't change unless you set it to another value. [Read more about removing dependencies.](/learn/removing-effect-dependencies)\n\n---"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "All factual claims in the answer are directly supported by the passages. The cause of the issue and the suggested fixes are accurately described based on the information from passages [2] and [4].",
+        "correctness": "The answer explains the cause of the Effect re-synchronizing on every keystroke due to the absence of a dependency array and provides the fix of adding a dependency array with only the relevant reactive values, satisfying the acceptance criteria."
+      },
+      "latencyMs": 3030
+    },
+    {
+      "id": "q18",
+      "type": "reasoning",
+      "language": "en",
+      "question": "Why is directly mutating an object held in React state a problem, and what does the documentation recommend instead?",
+      "systemAnswerable": true,
+      "answer": "Directly mutating an object held in React state is problematic because it does not trigger re-renders, meaning React is unaware of the changes made to the object. This can lead to issues with state management and the inability to utilize new React features that rely on immutability. The documentation recommends creating a new object (or making a copy of an existing one) and then updating the state to use that copy instead of mutating the original object directly [2][3][4][5].",
+      "retrievedDocs": [
+        "learn/updating-objects-in-state.md",
+        "learn/updating-objects-in-state.md",
+        "learn/updating-objects-in-state.md",
+        "learn/adding-interactivity.md",
+        "learn/updating-objects-in-state.md"
+      ],
+      "citedDocs": [
+        "learn/updating-objects-in-state.md",
+        "learn/adding-interactivity.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 2,
+          "chunkId": "02248aae3a029b1de66e4b7f",
+          "docPath": "learn/updating-objects-in-state.md",
+          "url": "https://react.dev/learn/updating-objects-in-state#why-is-mutating-state-not-recommended-in-react",
+          "content": "In practice, you can often \"get away\" with mutating state in React, but we strongly advise you not to do that so that you can use new React features developed with this approach in mind. Future contributors and perhaps even your future self will thank you!\n\n* Treat all state in React as immutable.\n* When you store objects in state, mutating them will not trigger renders and will change the state in previous render \"snapshots\".\n* Instead of mutating an object, create a *new* version of it, and trigger a re-render by setting state to it.\n* You can use the `{...obj, something: 'newValue'}` object spread syntax to create copies of objects.\n* Spread syntax is shallow: it only copies one level deep.\n* To update a nested object, you need to create copies all the way up from the place you're updating.\n* To reduce repetitive copying code, use Immer."
+        },
+        {
+          "index": 3,
+          "chunkId": "2e6d27cba96b178a1bcc6115",
+          "docPath": "learn/updating-objects-in-state.md",
+          "url": "https://react.dev/learn/updating-objects-in-state",
+          "content": "State can hold any kind of JavaScript value, including objects. But you shouldn't change objects that you hold in the React state directly. Instead, when you want to update an object, you need to create a new one (or make a copy of an existing one), and then set the state to use that copy.\n\n- How to correctly update an object in React state\n- How to update a nested object without mutating it\n- What immutability is, and how not to break it\n- How to make object copying less repetitive with Immer"
+        },
+        {
+          "index": 4,
+          "chunkId": "9d560ee2ad172d1b27b8832c",
+          "docPath": "learn/adding-interactivity.md",
+          "url": "https://react.dev/learn/adding-interactivity#updating-objects-in-state",
+          "content": "## Updating objects in state\n\nState can hold any kind of JavaScript value, including objects. But you shouldn't change objects and arrays that you hold in the React state directly. Instead, when you want to update an object and array, you need to create a new one (or make a copy of an existing one), and then update the state to use that copy.\n\nUsually, you will use the `...` spread syntax to copy objects and arrays that you want to change. For example, updating a nested object could look like this:\n\nIf copying objects in code gets tedious, you can use a library like [Immer](https://github.com/immerjs/use-immer) to reduce repetitive code:\n\nRead **[Updating Objects in State](/learn/updating-objects-in-state)** to learn how to update objects correctly."
+        },
+        {
+          "index": 5,
+          "chunkId": "c3b03163e7865cc1501ae5ff",
+          "docPath": "learn/updating-objects-in-state.md",
+          "url": "https://react.dev/learn/updating-objects-in-state#treat-state-as-read-only",
+          "content": "## Treat state as read-only\n\nIn other words, you should **treat any JavaScript object that you put into state as read-only.**\n\nThis example holds an object in state to represent the current pointer position. The red dot is supposed to move when you touch or move the cursor over the preview area. But the dot stays in the initial position:\n\nThe problem is with this bit of code.\n\n```js\nonPointerMove={e => {\n  position.x = e.clientX;\n  position.y = e.clientY;\n}}\n```\n\nThis code modifies the object assigned to `position` from [the previous render.](/learn/state-as-a-snapshot#rendering-takes-a-snapshot-in-time) But without using the state setting function, React has no idea that object has changed. So React does not do anything in response. It's like trying to change the order after you've already eaten the meal. While mutating state can work in some cases, we don't recommend it. You should treat the state value you have access to in a render as read-only.\n\nTo actually [trigger a re-render](/learn/state-as-a-snapshot#setting-state-triggers-renders) in this case, **create a *new* object and pass it to the state setting function:**\n\n```js\nonPointerMove={e => {\n  setPosition({\n    x: e.clientX,\n    y: e.clientY\n  });\n}}\n```\n\nWith `setPosition`, you're telling React:\n\n* Replace `position` with this new object\n* And render this component again\n\nNotice how the red dot now follows your pointer when you touch or hover over the preview area:"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information in the passages: mutating state does not trigger re-renders, and the recommended approach is to create a new object or copy and update the state with it. This is supported by passages [2], [3], [4], and [5].",
+        "correctness": "The answer explains that React cannot know the object changed, which prevents re-renders, and recommends creating a new object and passing it to the set function, satisfying all acceptance criteria."
+      },
+      "latencyMs": 2284
+    },
+    {
+      "id": "q19",
+      "type": "reasoning",
+      "language": "en",
+      "question": "Why does the documentation warn against using an array index as the key when the list can be reordered?",
+      "systemAnswerable": true,
+      "answer": "The documentation warns against using an array index as the key because it can lead to subtle and confusing bugs when the order of items in the list changes. If an item is inserted, deleted, or if the array gets reordered, using the index as a key can cause React to misidentify components, leading to issues with state and rendering. Instead, it is recommended to use a stable ID based on the data to ensure that keys remain consistent across renders [1][4].",
+      "retrievedDocs": [
+        "learn/tutorial-tic-tac-toe.md",
+        "learn/rendering-lists.md",
+        "learn/tutorial-tic-tac-toe.md",
+        "learn/rendering-lists.md",
+        "learn/describing-the-ui.md"
+      ],
+      "citedDocs": [
+        "learn/tutorial-tic-tac-toe.md",
+        "learn/rendering-lists.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "1e71d328eb4abf086a9e4f6f",
+          "docPath": "learn/tutorial-tic-tac-toe.md",
+          "url": "https://react.dev/learn/tutorial-tic-tac-toe#picking-a-key",
+          "content": "**It's strongly recommended that you assign proper keys whenever you build dynamic lists.** If you don't have an appropriate key, you may want to consider restructuring your data so that you do.\n\nIf no key is specified, React will report an error and use the array index as a key by default. Using the array index as a key is problematic when trying to re-order a list's items or inserting/removing list items. Explicitly passing `key={i}` silences the error but has the same problems as array indices and is not recommended in most cases.\n\nKeys do not need to be globally unique; they only need to be unique between components and their siblings."
+        },
+        {
+          "index": 4,
+          "chunkId": "35bff07eb142c5f571a18624",
+          "docPath": "learn/rendering-lists.md",
+          "url": "https://react.dev/learn/rendering-lists#rules-of-keys",
+          "content": "### Rules of keys\n\n* **Keys must be unique among siblings.** However, it’s okay to use the same keys for JSX nodes in _different_ arrays.\n* **Keys must not change** or that defeats their purpose! Don't generate them while rendering.\n\n### Why does React need keys?\n\nImagine that files on your desktop didn't have names. Instead, you'd refer to them by their order -- the first file, the second file, and so on. You could get used to it, but once you delete a file, it would get confusing. The second file would become the first file, the third file would be the second file, and so on.\n\nFile names in a folder and JSX keys in an array serve a similar purpose. They let us uniquely identify an item between its siblings. A well-chosen key provides more information than the position within the array. Even if the _position_ changes due to reordering, the `key` lets React identify the item throughout its lifetime.\n\nYou might be tempted to use an item's index in the array as its key. In fact, that's what React will use if you don't specify a `key` at all. But the order in which you render items will change over time if an item is inserted, deleted, or if the array gets reordered. Index as a key often leads to subtle and confusing bugs.\n\nSimilarly, do not generate keys on the fly, e.g. with `key={Math.random()}`. This will cause keys to never match up between renders, leading to all your components and DOM being recreated every time. Not only is this slow, but it will also lose any user input inside the list items. Instead, use a stable ID based on the data.\n\nNote that your components won't receive `key` as a prop. It's only used as a hint by React itself. If your component needs an ID, you have to pass it as a separate prop: ``.\n\nOn this page you learned:\n\n* How to move data out of components and into data structures like arrays and objects.\n* How to generate sets of similar components with JavaScript's `map()`.\n* How to create arrays of filtered items with JavaScript's `filter()`.\n* Why and how to set `key` on each component in a collection so React can keep track of each of them even if their position or data changes."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 0.5,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer is fully supported by the passages. It explains that using an array index as a key can lead to bugs when the list order changes, which is supported by [1] and [4]. It also mentions the recommendation to use a stable ID based on the data, which is supported by [4].",
+        "correctness": "The answer explains that using an array index as a key can lead to bugs when items are inserted, deleted, or reordered, as the index changes and keys no longer identify the same item, which satisfies the acceptance criteria."
+      },
+      "latencyMs": 2848
+    },
+    {
+      "id": "q20",
+      "type": "reasoning",
+      "language": "ko",
+      "question": "setState를 호출한 직후에 state 변수를 읽어도 이전 값이 나오는 이유가 뭐야?",
+      "systemAnswerable": true,
+      "answer": "setState를 호출한 직후에 state 변수를 읽어도 이전 값이 나오는 이유는 state가 스냅샷처럼 동작하기 때문입니다. state를 설정하는 것은 새로운 상태 값을 요청하지만, 이미 실행 중인 이벤트 핸들러 내의 state 변수에는 영향을 미치지 않습니다. 따라서 setState를 호출한 후에도 이전 값이 그대로 유지됩니다 [1][3][4].",
+      "retrievedDocs": [
+        "learn/state-as-a-snapshot.md",
+        "reference/react/useReducer.md",
+        "reference/react/useState.md",
+        "learn/adding-interactivity.md",
+        "learn/queueing-a-series-of-state-updates.md"
+      ],
+      "citedDocs": [
+        "learn/state-as-a-snapshot.md",
+        "reference/react/useState.md",
+        "learn/adding-interactivity.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "0deffcb68c55903fed529e85",
+          "docPath": "learn/state-as-a-snapshot.md",
+          "url": "https://react.dev/learn/state-as-a-snapshot",
+          "content": "State variables might look like regular JavaScript variables that you can read and write to. However, state behaves more like a snapshot. Setting it does not change the state variable you already have, but instead triggers a re-render.\n\n* How setting state triggers re-renders\n* When and how state updates\n* Why state does not update immediately after you set it\n* How event handlers access a \"snapshot\" of the state"
+        },
+        {
+          "index": 3,
+          "chunkId": "8571899919f3038f164fe2da",
+          "docPath": "reference/react/useState.md",
+          "url": "https://react.dev/reference/react/useState#troubleshooting",
+          "content": "## Troubleshooting\n\n\n\n### I've updated the state, but logging gives me the old value\n\nCalling the `set` function **does not change state in the running code**:\n\n```js {4,5,8}\nfunction handleClick() {\n  console.log(count);  // 0\n\n  setCount(count + 1); // Request a re-render with 1\n  console.log(count);  // Still 0!\n\n  setTimeout(() => {\n    console.log(count); // Also 0!\n  }, 5000);\n}\n```\n\nThis is because [states behaves like a snapshot.](/learn/state-as-a-snapshot) Updating state requests another render with the new state value, but does not affect the `count` JavaScript variable in your already-running event handler.\n\nIf you need to use the next state, you can save it in a variable before passing it to the `set` function:\n\n```js\nconst nextCount = count + 1;\nsetCount(nextCount);\n\nconsole.log(count);     // 0\nconsole.log(nextCount); // 1\n```\n\n---\n\n### I've updated the state, but the screen doesn't update\n\nReact will **ignore your update if the next state is equal to the previous state,** as determined by an [`Object.is`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is) comparison. This usually happens when you change an object or an array in state directly:\n\n```js\nobj.x = 10;  // 🚩 Wrong: mutating existing object\nsetObj(obj); // 🚩 Doesn't do anything\n```\n\nYou mutated an existing `obj` object and passed it back to `setObj`, so React ignored the update. To fix this, you need to ensure that you're always [_replacing_ objects and arrays in state instead of _mutating_ them](#updating-objects-and-arrays-in-state):\n\n```js\n// ✅ Correct: creating a new object\nsetObj({\n  ...obj,\n  x: 10\n});\n```\n\n---"
+        },
+        {
+          "index": 4,
+          "chunkId": "2e0c443d96004338ff1277bc",
+          "docPath": "learn/adding-interactivity.md",
+          "url": "https://react.dev/learn/adding-interactivity#state-as-a-snapshot",
+          "content": "## State as a snapshot\n\nUnlike regular JavaScript variables, React state behaves more like a snapshot. Setting it does not change the state variable you already have, but instead triggers a re-render. This can be surprising at first!\n\n```js\nconsole.log(count);  // 0\nsetCount(count + 1); // Request a re-render with 1\nconsole.log(count);  // Still 0!\n```\n\nThis behavior helps you avoid subtle bugs. Here is a little chat app. Try to guess what happens if you press \"Send\" first and *then* change the recipient to Bob. Whose name will appear in the `alert` five seconds later?\n\nRead **[State as a Snapshot](/learn/state-as-a-snapshot)** to learn why state appears \"fixed\" and unchanging inside the event handlers."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": null,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.3333333333333333,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer correctly explains that state behaves like a snapshot, and setting it does not change the state variable in the running code, which is supported by passages [1], [3], and [4].",
+        "correctness": "The answer explains that state behaves like a snapshot and that setting state requests a new render, while the state variable inside the currently running code remains fixed until the next render."
+      },
+      "latencyMs": 2437
+    },
+    {
+      "id": "q21",
+      "type": "unanswerable",
+      "language": "en",
+      "question": "What does React's useWatchEffect hook do?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "reference/react/useEffect.md",
+        "reference/react/useEffect.md",
+        "reference/react/hooks.md",
+        "reference/react/useEffectEvent.md",
+        "learn/reusing-logic-with-custom-hooks.md"
+      ],
+      "citedDocs": [],
+      "citedChunks": [],
+      "metrics": {
+        "recall": null,
+        "anchorRecall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 1641
+    },
+    {
+      "id": "q22",
+      "type": "unanswerable",
+      "language": "en",
+      "question": "What does the useFormStatus hook return?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "learn/reusing-logic-with-custom-hooks.md",
+        "learn/reusing-logic-with-custom-hooks.md",
+        "reference/react/hooks.md",
+        "learn/reusing-logic-with-custom-hooks.md",
+        "learn/index.md"
+      ],
+      "citedDocs": [],
+      "citedChunks": [],
+      "metrics": {
+        "recall": null,
+        "anchorRecall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 1965
+    },
+    {
+      "id": "q23",
+      "type": "unanswerable",
+      "language": "en",
+      "question": "Which React version first introduced Hooks, and when was it released?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "reference/react/hooks.md",
+        "learn/index.md",
+        "reference/react/index.md",
+        "learn/reusing-logic-with-custom-hooks.md",
+        "learn/typescript.md"
+      ],
+      "citedDocs": [],
+      "citedChunks": [],
+      "metrics": {
+        "recall": null,
+        "anchorRecall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 1706
+    },
+    {
+      "id": "q24",
+      "type": "unanswerable",
+      "language": "en",
+      "question": "How does hydrateRoot deal with mismatches between server-rendered HTML and the client render?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "reference/react/useEffect.md",
+        "reference/react/useId.md",
+        "reference/react/useId.md",
+        "reference/react/useId.md",
+        "reference/react/Activity.md"
+      ],
+      "citedDocs": [],
+      "citedChunks": [],
+      "metrics": {
+        "recall": null,
+        "anchorRecall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 1864
+    },
+    {
+      "id": "q25",
+      "type": "unanswerable",
+      "language": "ko",
+      "question": "React 19는 언제 정식 출시됐어?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "reference/react/legacy.md",
+        "learn/installation.md",
+        "learn/describing-the-ui.md",
+        "reference/react/components.md",
+        "learn/setup.md"
+      ],
+      "citedDocs": [],
+      "citedChunks": [],
+      "metrics": {
+        "recall": null,
+        "anchorRecall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 1557
+    },
+    {
+      "id": "q26",
+      "type": "multihop",
+      "language": "en",
+      "question": "In development with StrictMode enabled, my chat Effect connects and immediately disconnects once before connecting again. Is this a bug, and how should I write my Effect so this behavior is harmless?",
+      "systemAnswerable": true,
+      "answer": "This behavior is not a bug; it is an intentional feature of Strict Mode in development. React runs the setup and cleanup of your Effect one extra time to help identify issues. To make this behavior harmless, you should implement a cleanup function in your Effect that stops or undoes whatever the setup function was doing. This way, the user won't notice the difference between the Effect running once (as in production) and the setup → cleanup → setup sequence (as in development) [2][3].",
+      "retrievedDocs": [
+        "reference/react/StrictMode.md",
+        "reference/react/useEffect.md",
+        "learn/synchronizing-with-effects.md",
+        "reference/react/StrictMode.md",
+        "learn/synchronizing-with-effects.md"
+      ],
+      "citedDocs": [
+        "reference/react/useEffect.md",
+        "learn/synchronizing-with-effects.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 2,
+          "chunkId": "978eeb61b017ad8e2b6c887f",
+          "docPath": "reference/react/useEffect.md",
+          "url": "https://react.dev/reference/react/useEffect#troubleshooting",
+          "content": "## Troubleshooting\n\n\n\n### My Effect runs twice when the component mounts\n\nWhen Strict Mode is on, in development, React runs setup and cleanup one extra time before the actual setup.\n\nThis is a stress-test that verifies your Effect’s logic is implemented correctly. If this causes visible issues, your cleanup function is missing some logic. The cleanup function should stop or undo whatever the setup function was doing. The rule of thumb is that the user shouldn’t be able to distinguish between the setup being called once (as in production) and a setup → cleanup → setup sequence (as in development).\n\nRead more about [how this helps find bugs](/learn/synchronizing-with-effects#step-3-add-cleanup-if-needed) and [how to fix your logic.](/learn/synchronizing-with-effects#how-to-handle-the-effect-firing-twice-in-development)\n\n---"
+        },
+        {
+          "index": 3,
+          "chunkId": "50beecd2e61bdb6a7592ef82",
+          "docPath": "learn/synchronizing-with-effects.md",
+          "url": "https://react.dev/learn/synchronizing-with-effects#how-to-handle-the-effect-firing-twice-in-development",
+          "content": "## How to handle the Effect firing twice in development?\n\nReact intentionally remounts your components in development to find bugs like in the last example. **The right question isn't \"how to run an Effect once\", but \"how to fix my Effect so that it works after remounting\".**\n\nUsually, the answer is to implement the cleanup function.  The cleanup function should stop or undo whatever the Effect was doing. The rule of thumb is that the user shouldn't be able to distinguish between the Effect running once (as in production) and a _setup → cleanup → setup_ sequence (as you'd see in development).\n\nMost of the Effects you'll write will fit into one of the common patterns below.\n\n#### Don't use refs to prevent Effects from firing\n\nA common pitfall for preventing Effects firing twice in development is to use a `ref` to prevent the Effect from running more than once. For example, you could \"fix\" the above bug with a `useRef`:\n\n```js {1,3-4}\n  const connectionRef = useRef(null);\n  useEffect(() => {\n    // 🚩 This wont fix the bug!!!\n    if (!connectionRef.current) {\n      connectionRef.current = createConnection();\n      connectionRef.current.connect();\n    }\n  }, []);\n```\n\nThis makes it so you only see `\"✅ Connecting...\"` once in development, but it doesn't fix the bug.\n\nWhen the user navigates away, the connection still isn't closed and when they navigate back, a new connection is created. As the user navigates across the app, the connections would keep piling up, the same as it would before the \"fix\".\n\nTo fix the bug, it is not enough to just make the Effect run once. The effect needs to work after re-mounting, which means the connection needs to be cleaned up like in the solution above.\n\nSee the examples below for how to handle common patterns."
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information in the passages. It explains that the behavior is intentional in Strict Mode and advises implementing a cleanup function to handle the setup → cleanup → setup sequence, as supported by passages [2] and [3].",
+        "correctness": "The answer correctly states that the behavior is intentional in StrictMode and advises implementing a cleanup function to handle the setup and cleanup cycle properly."
+      },
+      "latencyMs": 2526
+    },
+    {
+      "id": "q27",
+      "type": "multihop",
+      "language": "en",
+      "question": "I want to reset all of a profile form's state when the selected user changes. Compare doing this with an Effect versus with a key, and state which approach the docs recommend and why.",
+      "systemAnswerable": true,
+      "answer": "The documentation recommends using a key to reset all of a profile form's state when the selected user changes, rather than using an Effect. This is because using a key allows React to treat different users' profiles as separate components, which automatically resets the state of the component and its children when the key changes. This approach is more efficient, as it avoids the initial render with stale state followed by a re-render, which would occur if using an Effect to reset the state [1][2].",
+      "retrievedDocs": [
+        "learn/you-might-not-need-an-effect.md",
+        "learn/you-might-not-need-an-effect.md",
+        "learn/preserving-and-resetting-state.md",
+        "learn/managing-state.md",
+        "learn/you-might-not-need-an-effect.md"
+      ],
+      "citedDocs": [
+        "learn/you-might-not-need-an-effect.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "4cee0fdb42161301a7ade352",
+          "docPath": "learn/you-might-not-need-an-effect.md",
+          "url": "https://react.dev/learn/you-might-not-need-an-effect#resetting-all-state-when-a-prop-changes",
+          "content": "```js {5,11-12}\nexport default function ProfilePage({ userId }) {\n  return (\n\n  );\n}\n\nfunction Profile({ userId }) {\n  // ✅ This and any other state below will reset on key change automatically\n  const [comment, setComment] = useState('');\n  // ...\n}\n```\n\nNormally, React preserves the state when the same component is rendered in the same spot. **By passing `userId` as a `key` to the `Profile` component, you're asking React to treat two `Profile` components with different `userId` as two different components that should not share any state.** Whenever the key (which you've set to `userId`) changes, React will recreate the DOM and [reset the state](/learn/preserving-and-resetting-state#option-2-resetting-state-with-a-key) of the `Profile` component and all of its children. Now the `comment` field will clear out automatically when navigating between profiles.\n\nNote that in this example, only the outer `ProfilePage` component is exported and visible to other files in the project. Components rendering `ProfilePage` don't need to pass the key to it: they pass `userId` as a regular prop. The fact `ProfilePage` passes it as a `key` to the inner `Profile` component is an implementation detail."
+        },
+        {
+          "index": 2,
+          "chunkId": "c575e8557f71d7005ccc98e7",
+          "docPath": "learn/you-might-not-need-an-effect.md",
+          "url": "https://react.dev/learn/you-might-not-need-an-effect#resetting-all-state-when-a-prop-changes",
+          "content": "### Resetting all state when a prop changes\n\nThis `ProfilePage` component receives a `userId` prop. The page contains a comment input, and you use a `comment` state variable to hold its value. One day, you notice a problem: when you navigate from one profile to another, the `comment` state does not get reset. As a result, it's easy to accidentally post a comment on a wrong user's profile. To fix the issue, you want to clear out the `comment` state variable whenever the `userId` changes:\n\n```js {expectedErrors: {'react-compiler': [6]}} {4-7}\nexport default function ProfilePage({ userId }) {\n  const [comment, setComment] = useState('');\n\n  // 🔴 Avoid: Resetting state on prop change in an Effect\n  useEffect(() => {\n    setComment('');\n  }, [userId]);\n  // ...\n}\n```\n\nThis is inefficient because `ProfilePage` and its children will first render with the stale value, and then render again. It is also complicated because you'd need to do this in *every* component that has some state inside `ProfilePage`. For example, if the comment UI is nested, you'd want to clear out nested comment state too.\n\nInstead, you can tell React that each user's profile is conceptually a _different_ profile by giving it an explicit key. Split your component in two and pass a `key` attribute from the outer component to the inner one:\n\n```js {5,11-12}\nexport default function ProfilePage({ userId }) {\n  return (\n\n  );\n}\n\nfunction Profile({ userId }) {\n  // ✅ This and any other state below will reset on key change automatically\n  const [comment, setComment] = useState('');\n  // ...\n}\n```"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 0.5,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information in the passages. It states that using a key is recommended over an Effect for resetting state when a user changes, as it treats profiles as separate components and avoids inefficient re-renders, which is supported by [1] and [2].",
+        "correctness": "The answer correctly explains that resetting state in an Effect is discouraged due to inefficiency and potential errors, and that using a key is recommended because it allows React to automatically reset the state by treating it as a different component."
+      },
+      "latencyMs": 3205
+    },
+    {
+      "id": "q28",
+      "type": "multihop",
+      "language": "en",
+      "question": "I wrapped my child component in memo, but it still re-renders on every parent render because I pass it an options object created inside the parent. Why doesn't memo help here, and how do the docs suggest fixing it?",
+      "systemAnswerable": true,
+      "answer": "`memo` does not help in this case because it relies on shallow equality to determine if props have changed. If you create a new object (like the options object) every time the parent re-renders, React will consider it a different prop, causing the child component to re-render. To fix this, the documentation suggests either simplifying the props or memoizing the props in the parent component using `useMemo` to ensure the same object reference is passed to the child component on re-renders [1][2].",
+      "retrievedDocs": [
+        "reference/react/memo.md",
+        "reference/react/memo.md",
+        "reference/react/memo.md",
+        "reference/react/memo.md",
+        "reference/react/useMemo.md"
+      ],
+      "citedDocs": [
+        "reference/react/memo.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "5527307f57cc5755f063e847",
+          "docPath": "reference/react/memo.md",
+          "url": "https://react.dev/reference/react/memo#troubleshooting",
+          "content": "## Troubleshooting\n\n\n\n### My component re-renders when a prop is an object, array, or function\n\nReact compares old and new props by shallow equality: that is, it considers whether each new prop is reference-equal to the old prop. If you create a new object or array each time the parent is re-rendered, even if the individual elements are each the same, React will still consider it to be changed. Similarly, if you create a new function when rendering the parent component, React will consider it to have changed even if the function has the same definition. To avoid this, [simplify props or memoize props in the parent component](#minimizing-props-changes)."
+        },
+        {
+          "index": 2,
+          "chunkId": "13192caa4927aee200fbc784",
+          "docPath": "reference/react/memo.md",
+          "url": "https://react.dev/reference/react/memo#minimizing-props-changes",
+          "content": "### Minimizing props changes\n\nWhen you use `memo`, your component re-renders whenever any prop is not *shallowly equal* to what it was previously. This means that React compares every prop in your component with its previous value using the [`Object.is`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/is) comparison. Note that `Object.is(3, 3)` is `true`, but `Object.is({}, {})` is `false`.\n\nTo get the most out of `memo`, minimize the times that the props change. For example, if the prop is an object, prevent the parent component from re-creating that object every time by using [`useMemo`:](/reference/react/useMemo)\n\n```js {5-8}\nfunction Page() {\n  const [name, setName] = useState('Taylor');\n  const [age, setAge] = useState(42);\n\n  const person = useMemo(\n    () => ({ name, age }),\n    [name, age]\n  );\n\n  return ;\n}\n\nconst Profile = memo(function Profile({ person }) {\n  // ...\n});\n```\n\nA better way to minimize props changes is to make sure the component accepts the minimum necessary information in its props. For example, it could accept individual values instead of a whole object:\n\n```js {4,7}\nfunction Page() {\n  const [name, setName] = useState('Taylor');\n  const [age, setAge] = useState(42);\n  return ;\n}\n\nconst Profile = memo(function Profile({ name, age }) {\n  // ...\n});\n```\n\nEven individual values can sometimes be projected to ones that change less frequently. For example, here a component accepts a boolean indicating the presence of a value rather than the value itself:\n\n```js {3}\nfunction GroupsLanding({ person }) {\n  const hasGroups = person.groups !== null;\n  return ;\n}\n\nconst CallToAction = memo(function CallToAction({ hasGroups }) {\n  // ...\n});\n```\n\nWhen you need to pass a function to memoized component, either declare it outside your component so that it never changes, or [`useCallback`](/reference/react/useCallback#skipping-re-rendering-of-components) to cache its definition between re-renders.\n\n---"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer correctly explains that `memo` relies on shallow equality, which causes re-renders if a new object is created each time. It also accurately suggests using `useMemo` to maintain the same object reference, as supported by passages [1] and [2].",
+        "correctness": "The answer correctly explains that memo uses shallow comparison and that a new object reference causes re-renders. It also suggests using useMemo to stabilize the prop reference, meeting all acceptance criteria."
+      },
+      "latencyMs": 2616
+    },
+    {
+      "id": "q29",
+      "type": "multihop",
+      "language": "en",
+      "question": "When should I extract my component's state logic into a reducer, and once I have one, how do I make the state and dispatch available to distant child components without prop drilling?",
+      "systemAnswerable": true,
+      "answer": "You should extract your component's state logic into a reducer when you have many state updates spread across multiple event handlers, as this can become overwhelming. A reducer consolidates all the state update logic outside your component, making your event handlers concise by only specifying user actions [5].\n\nTo make the state and dispatch available to distant child components without prop drilling, you can combine a reducer with context. This involves creating a context, putting the state and dispatch into that context, and then using the context anywhere in the component tree. This way, any component below the top-level component can read the state and dispatch actions without the need for repetitive prop passing [3][4].",
+      "retrievedDocs": [
+        "learn/scaling-up-with-reducer-and-context.md",
+        "learn/managing-state.md",
+        "learn/scaling-up-with-reducer-and-context.md",
+        "learn/scaling-up-with-reducer-and-context.md",
+        "learn/managing-state.md"
+      ],
+      "citedDocs": [
+        "learn/managing-state.md",
+        "learn/scaling-up-with-reducer-and-context.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 5,
+          "chunkId": "19410de1057e60281d5fad4b",
+          "docPath": "learn/managing-state.md",
+          "url": "https://react.dev/learn/managing-state#extracting-state-logic-into-a-reducer",
+          "content": "## Extracting state logic into a reducer\n\nComponents with many state updates spread across many event handlers can get overwhelming. For these cases, you can consolidate all the state update logic outside your component in a single function, called \"reducer\". Your event handlers become concise because they only specify the user \"actions\". At the bottom of the file, the reducer function specifies how the state should update in response to each action!\n\nRead **[Extracting State Logic into a Reducer](/learn/extracting-state-logic-into-a-reducer)** to learn how to consolidate logic in the reducer function."
+        },
+        {
+          "index": 3,
+          "chunkId": "8bd60a286cfe630a0e6d37f4",
+          "docPath": "learn/scaling-up-with-reducer-and-context.md",
+          "url": "https://react.dev/learn/scaling-up-with-reducer-and-context#combining-a-reducer-with-context",
+          "content": "## Combining a reducer with context\n\nIn this example from [the introduction to reducers](/learn/extracting-state-logic-into-a-reducer), the state is managed by a reducer. The reducer function contains all of the state update logic and is declared at the bottom of this file:\n\nA reducer helps keep the event handlers short and concise. However, as your app grows, you might run into another difficulty. **Currently, the `tasks` state and the `dispatch` function are only available in the top-level `TaskApp` component.** To let other components read the list of tasks or change it, you have to explicitly [pass down](/learn/passing-props-to-a-component) the current state and the event handlers that change it as props.\n\nFor example, `TaskApp` passes a list of tasks and the event handlers to `TaskList`:\n\n```js\n\n```\n\nAnd `TaskList` passes the event handlers to `Task`:\n\n```js\n\n```\n\nIn a small example like this, this works well, but if you have tens or hundreds of components in the middle, passing down all state and functions can be quite frustrating!\n\nThis is why, as an alternative to passing them through props, you might want to put both the `tasks` state and the `dispatch` function [into context.](/learn/passing-data-deeply-with-context) **This way, any component below `TaskApp` in the tree can read the tasks and dispatch actions without the repetitive \"prop drilling\".**\n\nHere is how you can combine a reducer with context:\n\n1. **Create** the context.\n2. **Put** state and dispatch into context.\n3. **Use** context anywhere in the tree."
+        },
+        {
+          "index": 4,
+          "chunkId": "4b870cdd432d06f17dff1e1b",
+          "docPath": "learn/scaling-up-with-reducer-and-context.md",
+          "url": "https://react.dev/learn/scaling-up-with-reducer-and-context#step-1-create-the-context",
+          "content": "### Step 1: Create the context\n\nThe `useReducer` Hook returns the current `tasks` and the `dispatch` function that lets you update them:\n\n```js\nconst [tasks, dispatch] = useReducer(tasksReducer, initialTasks);\n```\n\nTo pass them down the tree, you will [create](/learn/passing-data-deeply-with-context#step-2-use-the-context) two separate contexts:\n\n- `TasksContext` provides the current list of tasks.\n- `TasksDispatchContext` provides the function that lets components dispatch actions.\n\nExport them from a separate file so that you can later import them from other files:\n\nHere, you're passing `null` as the default value to both contexts. The actual values will be provided by the `TaskApp` component.\n\n### Step 2: Put state and dispatch into context\n\nNow you can import both contexts in your `TaskApp` component. Take the `tasks` and `dispatch` returned by `useReducer()` and [provide them](/learn/passing-data-deeply-with-context#step-3-provide-the-context) to the entire tree below:\n\n```js {4,7-8}\nimport { TasksContext, TasksDispatchContext } from './TasksContext.js';\n\nexport default function TaskApp() {\n  const [tasks, dispatch] = useReducer(tasksReducer, initialTasks);\n  // ...\n  return (\n\n        ...\n\n  );\n}\n```\n\nFor now, you pass the information both via props and in context:\n\nIn the next step, you will remove prop passing."
+        }
+      ],
+      "metrics": {
+        "recall": 0.5,
+        "anchorRecall": 0.5,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 0.5
+      },
+      "judgeReasons": {
+        "faithfulness": "All factual claims in the answer are directly supported by the passages. The need to extract state logic into a reducer due to many state updates is supported by [5]. The method of using context to avoid prop drilling is supported by [3] and [4].",
+        "correctness": "The answer mentions the core reason for using a reducer and describes combining the reducer with context. However, it misses the documented trade-offs of using a reducer, such as improved readability/debuggability/testability at the cost of more code."
+      },
+      "latencyMs": 3150
+    },
+    {
+      "id": "q30",
+      "type": "multihop",
+      "language": "en",
+      "question": "Why does React require components to be pure, and what mechanism does React provide in development to detect impure components?",
+      "systemAnswerable": true,
+      "answer": "React requires components to be pure because purity allows components to run in different environments, improves performance by enabling React to skip rendering unchanged components, and allows React to restart rendering without wasting time on outdated renders. Pure components also help avoid bugs and unpredictable behavior as the codebase grows. To maintain purity, components should not change any preexisting objects or variables during rendering and should always return the same JSX for the same inputs [1][4].\n\nIn development, React provides \"Strict Mode,\" which calls each component's function twice. This mechanism helps detect impure components by revealing unexpected behavior when a function is called multiple times. If a component is pure, calling it twice will not change its behavior, while impure components will exhibit noticeable differences, helping developers identify and fix bugs early [2][3].",
+      "retrievedDocs": [
+        "learn/keeping-components-pure.md",
+        "learn/keeping-components-pure.md",
+        "reference/react/StrictMode.md",
+        "learn/keeping-components-pure.md",
+        "reference/react/index.md"
+      ],
+      "citedDocs": [
+        "learn/keeping-components-pure.md",
+        "reference/react/StrictMode.md"
+      ],
+      "citedChunks": [
+        {
+          "index": 1,
+          "chunkId": "3f6bd4adcf4c41eb71e9c2a7",
+          "docPath": "learn/keeping-components-pure.md",
+          "url": "https://react.dev/learn/keeping-components-pure#why-does-react-care-about-purity",
+          "content": "#### Why does React care about purity?\n\nWriting pure functions takes some habit and discipline. But it also unlocks marvelous opportunities:\n\n* Your components could run in a different environment—for example, on the server! Since they return the same result for the same inputs, one component can serve many user requests.\n* You can improve performance by [skipping rendering](/reference/react/memo) components whose inputs have not changed. This is safe because pure functions always return the same results, so they are safe to cache.\n* If some data changes in the middle of rendering a deep component tree, React can restart rendering without wasting time to finish the outdated render. Purity makes it safe to stop calculating at any time.\n\nEvery new React feature we're building takes advantage of purity. From data fetching to animations to performance, keeping components pure unlocks the power of the React paradigm.\n\n* A component must be pure, meaning:\n  * **It minds its own business.** It should not change any objects or variables that existed before rendering.\n  * **Same inputs, same output.** Given the same inputs, a component should always return the same JSX.\n* Rendering can happen at any time, so components should not depend on each others' rendering sequence.\n* You should not mutate any of the inputs that your components use for rendering. That includes props, state, and context. To update the screen, [\"set\" state](/learn/state-a-components-memory) instead of mutating preexisting objects.\n* Strive to express your component's logic in the JSX you return. When you need to \"change things\", you'll usually want to do it in an event handler. As a last resort, you can `useEffect`.\n* Writing pure functions takes a bit of practice, but it unlocks the power of React's paradigm."
+        },
+        {
+          "index": 4,
+          "chunkId": "515439db075167c62482a193",
+          "docPath": "learn/keeping-components-pure.md",
+          "url": "https://react.dev/learn/keeping-components-pure",
+          "content": "Some JavaScript functions are *pure.* Pure functions only perform a calculation and nothing more. By strictly only writing your components as pure functions, you can avoid an entire class of baffling bugs and unpredictable behavior as your codebase grows. To get these benefits, though, there are a few rules you must follow.\n\n* What purity is and how it helps you avoid bugs\n* How to keep components pure by keeping changes out of the render phase\n* How to use Strict Mode to find mistakes in your components"
+        },
+        {
+          "index": 2,
+          "chunkId": "bf590535945a3f84f66f35da",
+          "docPath": "learn/keeping-components-pure.md",
+          "url": "https://react.dev/learn/keeping-components-pure#detecting-impure-calculations-with-strict-mode",
+          "content": "#### Detecting impure calculations with StrictMode\n\nAlthough you might not have used them all yet, in React there are three kinds of inputs that you can read while rendering: [props](/learn/passing-props-to-a-component), [state](/learn/state-a-components-memory), and [context.](/learn/passing-data-deeply-with-context) You should always treat these inputs as read-only.\n\nWhen you want to *change* something in response to user input, you should [set state](/learn/state-a-components-memory) instead of writing to a variable. You should never change preexisting variables or objects while your component is rendering.\n\nReact offers a \"Strict Mode\" in which it calls each component's function twice during development. **By calling the component functions twice, Strict Mode helps find components that break these rules.**\n\nNotice how the original example displayed \"Guest #2\", \"Guest #4\", and \"Guest #6\" instead of \"Guest #1\", \"Guest #2\", and \"Guest #3\". The original function was impure, so calling it twice broke it. But the fixed pure version works even if the function is called twice every time. **Pure functions only calculate, so calling them twice won't change anything**--just like calling `double(2)` twice doesn't change what's returned, and solving <Math><MathI>y</MathI> = 2<MathI>x</MathI></Math> twice doesn't change what <MathI>y</MathI> is. Same inputs, same outputs. Always.\n\nStrict Mode has no effect in production, so it won't slow down the app for your users. To opt into Strict Mode, you can wrap your root component into `<React.StrictMode>`. Some frameworks do this by default."
+        },
+        {
+          "index": 3,
+          "chunkId": "687782672159f1fa114b53f0",
+          "docPath": "reference/react/StrictMode.md",
+          "url": "https://react.dev/reference/react/StrictMode#fixing-bugs-found-by-double-rendering-in-development",
+          "content": "### Fixing bugs found by double rendering in development\n\n[React assumes that every component you write is a pure function.](/learn/keeping-components-pure) This means that React components you write must always return the same JSX given the same inputs (props, state, and context).\n\nComponents breaking this rule behave unpredictably and cause bugs. To help you find accidentally impure code, Strict Mode calls some of your functions (only the ones that should be pure) **twice in development.** This includes:\n\n- Your component function body (only top-level logic, so this doesn't include code inside event handlers)\n- Functions that you pass to [`useState`](/reference/react/useState), [`set` functions](/reference/react/useState#setstate), [`useMemo`](/reference/react/useMemo), or [`useReducer`](/reference/react/useReducer)\n- Some class component methods like [`constructor`](/reference/react/Component#constructor), [`render`](/reference/react/Component#render), [`shouldComponentUpdate`](/reference/react/Component#shouldcomponentupdate) ([see the whole list](https://reactjs.org/docs/strict-mode.html#detecting-unexpected-side-effects))\n\nIf a function is pure, running it twice does not change its behavior because a pure function produces the same result every time. However, if a function is impure (for example, it mutates the data it receives), running it twice tends to be noticeable (that's what makes it impure!) This helps you spot and fix the bug early.\n\n**Here is an example to illustrate how double rendering in Strict Mode helps you find bugs early.**\n\nThis `StoryTray` component takes an array of `stories` and adds one last \"Create Story\" item at the end:\n\nThere is a mistake in the code above. However, it is easy to miss because the initial output appears correct.\n\nThis mistake will become more noticeable if the `StoryTray` component re-renders multiple times. For example, let's make the `StoryTray` re-render with a different background color whenever you hover over it:"
+        }
+      ],
+      "metrics": {
+        "recall": 1,
+        "anchorRecall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "All factual claims in the answer are directly supported by the passages. The reasons for requiring purity and the mechanism of Strict Mode for detecting impure components are accurately described and supported by the cited passages.",
+        "correctness": "The answer provides a documented reason for why purity matters and explains that Strict Mode double-invokes component functions to detect impure components."
+      },
+      "latencyMs": 2841
+    }
+  ]
+}
