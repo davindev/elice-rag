@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { GoldItem } from './goldset.js';
 import { mean } from './metrics.js';
+import { evaluateTarget, METRIC_TARGETS } from './targets.js';
 
 export interface QuestionResult {
   id: string;
@@ -43,6 +44,11 @@ export interface RunConfig {
   judgePromptHash: string;
   goldsetHash: string;
   nodeVersion: string;
+  /** rerank run 전용 메타데이터 — 재현성·실험 무결성 (fallbackCount가 0이어야 순수 rerank arm) */
+  rerankModel?: string;
+  rerankCandidateK?: number;
+  rerankPromptHash?: string;
+  rerankFallbackCount?: number;
 }
 
 export interface Summary {
@@ -123,19 +129,32 @@ export function renderMarkdown(
     `| ragPromptHash | ${config.ragPromptHash.slice(0, 12)} |`,
     `| judgePromptHash | ${config.judgePromptHash.slice(0, 12)} |`,
     `| goldsetHash | ${config.goldsetHash.slice(0, 12)} |`,
+    ...(config.rerankModel === undefined
+      ? []
+      : [
+          `| rerankModel | ${config.rerankModel} |`,
+          `| rerankCandidateK | ${config.rerankCandidateK} |`,
+          `| rerankPromptHash | ${config.rerankPromptHash?.slice(0, 12)} |`,
+          `| rerankFallbackCount | ${config.rerankFallbackCount} |`,
+        ]),
     '',
     '## Summary (en 문항 기준)',
     '',
-    '| metric | score |',
-    '|---|---|',
-    `| Recall@k (doc) | ${fmt(summary.recallAtK)} |`,
-    `| Anchor Recall@k (section) | ${fmt(summary.anchorRecallAtK)} |`,
-    `| MRR | ${fmt(summary.mrr)} |`,
-    `| Citation Precision | ${fmt(summary.citationPrecision)} |`,
-    `| Abstention Accuracy (unanswerable) | ${fmt(summary.abstentionAccuracy)} |`,
-    `| False Refusal Rate (answerable) | ${fmt(summary.falseRefusalRate)} |`,
-    `| Faithfulness (judge) | ${fmt(summary.faithfulness)} |`,
-    `| Correctness (judge) | ${fmt(summary.correctness)} |`,
+    'gate = 회귀 차단 기준(`pnpm eval --strict` 실행 시 미달이면 exit 1), target = 개선 목표 (근거: src/eval/targets.ts)',
+    '',
+    '| metric | score | gate | target | 상태 |',
+    '|---|---|---|---|---|',
+    ...METRIC_TARGETS.map((t) => {
+      const actual = summary[t.key];
+      const op = t.direction === 'min' ? '≥' : '≤';
+      const statusLabel = {
+        target: '🎯 target 달성',
+        gate: '✅ gate 통과',
+        fail: '❌ gate 미달',
+        na: 'N/A',
+      }[evaluateTarget(t, actual)];
+      return `| ${t.label} | ${fmt(actual)} | ${op} ${t.gate} | ${op} ${t.target} | ${statusLabel} |`;
+    }),
     '',
     '### 유형별 (en)',
     '',
