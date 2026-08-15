@@ -1,0 +1,15 @@
+{"id": "q01", "metric": "correctness", "humanScore": 1.0}
+{"id": "q04", "metric": "correctness", "humanScore": 0.5}
+{"id": "q05", "metric": "correctness", "humanScore": 1.0}
+{"id": "q09", "metric": "correctness", "humanScore": 0.5}
+{"id": "q11", "metric": "correctness", "humanScore": 1.0}
+{"id": "q12", "metric": "correctness", "humanScore": 0.0}
+{"id": "q15", "metric": "correctness", "humanScore": 1.0}
+{"id": "q16", "metric": "correctness", "humanScore": 0.5}
+{"id": "q17", "metric": "correctness", "humanScore": 1.0}
+{"id": "q19", "metric": "correctness", "humanScore": 1.0}
+{"id": "q02", "metric": "faithfulness", "humanScore": 1.0}
+{"id": "q07", "metric": "faithfulness", "humanScore": 1.0}
+{"id": "q13", "metric": "faithfulness", "humanScore": 1.0}
+{"id": "q16", "metric": "faithfulness", "humanScore": 1.0}
+{"id": "q18", "metric": "faithfulness", "humanScore": 1.0}
