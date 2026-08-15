@@ -1,0 +1,799 @@
+{
+  "summary": {
+    "recallAtK": 1,
+    "mrr": 0.8657407407407408,
+    "citationPrecision": 0.6944444444444444,
+    "abstentionAccuracy": 1,
+    "falseRefusalRate": 0,
+    "faithfulness": 1,
+    "correctness": 0.8333333333333334,
+    "byType": {
+      "factoid": {
+        "count": 9,
+        "correctness": 0.8888888888888888,
+        "faithfulness": 1
+      },
+      "summary": {
+        "count": 5,
+        "correctness": 0.8,
+        "faithfulness": 1
+      },
+      "reasoning": {
+        "count": 4,
+        "correctness": 0.75,
+        "faithfulness": 1
+      },
+      "unanswerable": {
+        "count": 4,
+        "correctness": null,
+        "faithfulness": null
+      }
+    },
+    "koProbe": {
+      "count": 3,
+      "correctness": 1,
+      "abstentionAccuracy": 1
+    }
+  },
+  "results": [
+    {
+      "id": "q01",
+      "type": "factoid",
+      "language": "en",
+      "question": "What does useState return?",
+      "systemAnswerable": true,
+      "answer": "`useState` returns an array with exactly two values: the current state and the `set` function that lets you update the state to a different value and trigger a re-render [2][3].",
+      "retrievedDocs": [
+        "reference/react/useState.md",
+        "reference/react/useState.md",
+        "learn/state-a-components-memory.md",
+        "reference/react/useState.md",
+        "learn/referencing-values-with-refs.md"
+      ],
+      "citedDocs": [
+        "reference/react/useState.md",
+        "learn/state-a-components-memory.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately states that `useState` returns an array with two values: the current state and the set function, which is supported by both passages [2] and [3].",
+        "correctness": "The answer satisfies all requirements by stating that useState returns an array of exactly two values: the current state and a set function that updates it and triggers a re-render."
+      },
+      "latencyMs": 2462
+    },
+    {
+      "id": "q02",
+      "type": "factoid",
+      "language": "en",
+      "question": "If I pass no dependency array to useEffect, when does the effect run?",
+      "systemAnswerable": true,
+      "answer": "If you pass no dependency array at all, your Effect runs **after every single commit** of your component [1].",
+      "retrievedDocs": [
+        "reference/react/useEffect.md",
+        "learn/synchronizing-with-effects.md",
+        "reference/react/useEffect.md",
+        "reference/react/useEffect.md",
+        "reference/react/useEffect.md"
+      ],
+      "citedDocs": [
+        "reference/react/useEffect.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer is directly supported by passage [1], which states that if no dependency array is passed, the effect runs after every single commit.",
+        "correctness": "The answer correctly states that the effect runs after every re-render of the component when no dependency array is provided."
+      },
+      "latencyMs": 1272
+    },
+    {
+      "id": "q03",
+      "type": "factoid",
+      "language": "en",
+      "question": "What does the cache API do, and where can it be used?",
+      "systemAnswerable": true,
+      "answer": "The `cache` API lets you cache the result of a data fetch or computation. It is only for use with React Server Components [1][5].",
+      "retrievedDocs": [
+        "reference/react/cache.md",
+        "reference/react/cache.md",
+        "reference/react/cache.md",
+        "reference/react/use.md",
+        "reference/react/cache.md"
+      ],
+      "citedDocs": [
+        "reference/react/cache.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information in the passages: the `cache` API is used to cache the result of a data fetch or computation [1][5], and it is only for use with React Server Components [1][5].",
+        "correctness": "The answer states that the cache API memoizes the result of a data fetch or computation and specifies that it is for use in Server Components only, satisfying all acceptance criteria."
+      },
+      "latencyMs": 1388
+    },
+    {
+      "id": "q04",
+      "type": "factoid",
+      "language": "en",
+      "question": "How can I make a component skip re-rendering when its props have not changed?",
+      "systemAnswerable": true,
+      "answer": "You can make a component skip re-rendering when its props have not changed by using `PureComponent` for class components or by wrapping the component in `memo` for functional components. This way, React will not re-render the component as long as its new props and state are the same as the old props and state [2][3].",
+      "retrievedDocs": [
+        "reference/react/memo.md",
+        "reference/react/PureComponent.md",
+        "reference/react/useMemo.md",
+        "reference/react/Component.md",
+        "learn/choosing-the-state-structure.md"
+      ],
+      "citedDocs": [
+        "reference/react/PureComponent.md",
+        "reference/react/useMemo.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 0,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 0.5
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer correctly states that `PureComponent` can be used for class components and `memo` for functional components to skip re-rendering when props have not changed, which is supported by passages [2] and [3].",
+        "correctness": "Mentions wrapping the component in memo but also includes information about PureComponent, which is not required by the criteria."
+      },
+      "latencyMs": 1329
+    },
+    {
+      "id": "q05",
+      "type": "factoid",
+      "language": "en",
+      "question": "What can I pass to the set function returned by useState?",
+      "systemAnswerable": true,
+      "answer": "You can pass the next state directly, or a function that calculates it from the previous state to the set function returned by `useState` [2].",
+      "retrievedDocs": [
+        "reference/react/useState.md",
+        "reference/react/useState.md",
+        "reference/react/useState.md",
+        "reference/react/useState.md",
+        "learn/state-a-components-memory.md"
+      ],
+      "citedDocs": [
+        "reference/react/useState.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer is fully supported by passage [2], which states that you can pass the next state directly or a function that calculates it from the previous state to the set function returned by useState.",
+        "correctness": "The answer states that the set function accepts either the next state value directly or a function that calculates it from the previous state, satisfying the acceptance criteria."
+      },
+      "latencyMs": 1255
+    },
+    {
+      "id": "q06",
+      "type": "factoid",
+      "language": "en",
+      "question": "What rules do keys need to follow when rendering lists in React?",
+      "systemAnswerable": true,
+      "answer": "1. Keys must be unique among siblings. However, it’s acceptable to use the same keys for JSX nodes in different arrays [5].\n2. Keys must not change; generating them while rendering defeats their purpose [5].\n3. If no key is specified, React will report an error and use the array index as a key by default, which is not recommended [4].",
+      "retrievedDocs": [
+        "learn/describing-the-ui.md",
+        "learn/tutorial-tic-tac-toe.md",
+        "learn/index.md",
+        "learn/tutorial-tic-tac-toe.md",
+        "learn/rendering-lists.md"
+      ],
+      "citedDocs": [
+        "learn/rendering-lists.md",
+        "learn/tutorial-tic-tac-toe.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 0.25,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "All factual claims in the answer are directly supported by the passages. The uniqueness of keys among siblings and their stability are supported by [5]. The default behavior of using array index as a key and the recommendation against it are supported by [4].",
+        "correctness": "The answer states that keys must be unique among siblings, must not change, and should not be generated during render, satisfying all acceptance criteria."
+      },
+      "latencyMs": 1737
+    },
+    {
+      "id": "q07",
+      "type": "factoid",
+      "language": "en",
+      "question": "What extra checks does Strict Mode enable in development?",
+      "systemAnswerable": true,
+      "answer": "Strict Mode enables the following extra checks in development:\n\n1. Your components will re-render an extra time to find bugs caused by impure rendering.\n2. Your components will re-run Effects an extra time to find bugs caused by missing Effect cleanup.\n3. Your components will re-run ref callbacks an extra time to find bugs caused by missing ref cleanup.\n4. Your components will be checked for usage of deprecated APIs [1][3].",
+      "retrievedDocs": [
+        "reference/react/StrictMode.md",
+        "reference/react/StrictMode.md",
+        "reference/react/StrictMode.md",
+        "reference/react/StrictMode.md",
+        "reference/react/StrictMode.md"
+      ],
+      "citedDocs": [
+        "reference/react/StrictMode.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "Every factual claim in the answer is directly supported by the passages [1] and [3]. The answer lists the extra checks enabled by Strict Mode, which are explicitly mentioned in both passages.",
+        "correctness": "The answer mentions development-only behaviors such as double rendering to find impure rendering, re-running effects an extra time, and warnings for deprecated APIs, satisfying the acceptance criteria."
+      },
+      "latencyMs": 1647
+    },
+    {
+      "id": "q08",
+      "type": "factoid",
+      "language": "en",
+      "question": "What is useId for, and what should it not be used for?",
+      "systemAnswerable": true,
+      "answer": "`useId` is a React Hook for generating unique IDs that can be passed to accessibility attributes [1]. It should not be used to generate cache keys for `use()` or keys in a list, as keys should be generated from your data [2][3]. Additionally, `useId` cannot be used in async Server Components [2].",
+      "retrievedDocs": [
+        "reference/react/useId.md",
+        "reference/react/useId.md",
+        "reference/react/useId.md",
+        "reference/react/useId.md",
+        "reference/react/useId.md"
+      ],
+      "citedDocs": [
+        "reference/react/useId.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "Every factual claim in the answer is directly supported by the passages. The purpose of `useId` for generating unique IDs for accessibility attributes is supported by [1]. The restrictions on not using `useId` for cache keys or list keys are supported by [2] and [3]. The limitation regarding async Server Components is also mentioned in [2].",
+        "correctness": "The answer states that useId generates unique IDs for accessibility attributes and should not be used for generating keys in a list, satisfying all acceptance criteria."
+      },
+      "latencyMs": 1540
+    },
+    {
+      "id": "q09",
+      "type": "factoid",
+      "language": "en",
+      "question": "Does updating a ref created with useRef trigger a re-render?",
+      "systemAnswerable": true,
+      "answer": "No, updating a ref created with `useRef` does not trigger a re-render [1][2].",
+      "retrievedDocs": [
+        "reference/react/useRef.md",
+        "learn/escape-hatches.md",
+        "learn/referencing-values-with-refs.md",
+        "learn/manipulating-the-dom-with-refs.md",
+        "reference/react/useRef.md"
+      ],
+      "citedDocs": [
+        "reference/react/useRef.md",
+        "learn/escape-hatches.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 0.5
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer is fully supported by the passages. Both passages [1] and [2] explicitly state that changing a ref does not trigger a re-render.",
+        "correctness": "The answer correctly states that updating a ref does not trigger a re-render but does not mention that useRef returns an object with a single current property."
+      },
+      "latencyMs": 1098
+    },
+    {
+      "id": "q10",
+      "type": "factoid",
+      "language": "ko",
+      "question": "useContext는 무엇을 반환해?",
+      "systemAnswerable": true,
+      "answer": "`useContext`는 호출하는 컴포넌트에 대한 컨텍스트 값을 반환합니다. 이 값은 호출하는 컴포넌트 트리에서 가장 가까운 `SomeContext`에 전달된 `value`에 의해 결정됩니다. 만약 그러한 프로바이더가 없다면, 반환된 값은 해당 컨텍스트에 대해 `createContext`에서 전달한 `defaultValue`가 됩니다. 반환된 값은 항상 최신 상태입니다. [4]",
+      "retrievedDocs": [
+        "reference/react/useContext.md",
+        "reference/react/use.md",
+        "reference/react/hooks.md",
+        "reference/react/useContext.md",
+        "reference/react/createContext.md"
+      ],
+      "citedDocs": [
+        "reference/react/useContext.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information in passage [4] about what `useContext` returns, including the context value determination and default value fallback.",
+        "correctness": "The answer correctly states that useContext returns the context value for the calling component, determined by the nearest matching context provider or the default value if no provider is present."
+      },
+      "latencyMs": 1906
+    },
+    {
+      "id": "q11",
+      "type": "summary",
+      "language": "en",
+      "question": "Summarize the differences between useEffect and useLayoutEffect, and which one the docs recommend by default.",
+      "systemAnswerable": true,
+      "answer": "`useLayoutEffect` is a version of `useEffect` that fires before the browser repaints the screen, allowing for layout measurements and updates without the user noticing any flicker. In contrast, `useEffect` does not block the browser from repainting, which can lead to visual inconsistencies, such as flickering, especially on slower devices [2][5]. \n\nThe documentation recommends preferring `useEffect` when possible, as `useLayoutEffect` can hurt performance due to blocking the browser's painting process [1][2].",
+      "retrievedDocs": [
+        "reference/react/useLayoutEffect.md",
+        "reference/react/useLayoutEffect.md",
+        "reference/react/useLayoutEffect.md",
+        "reference/react/useEffect.md",
+        "reference/react/useLayoutEffect.md"
+      ],
+      "citedDocs": [
+        "reference/react/useLayoutEffect.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "All factual claims in the answer are directly supported by the passages. The differences between useEffect and useLayoutEffect are accurately described, and the recommendation to prefer useEffect is supported by the cited passages.",
+        "correctness": "The answer correctly states that useLayoutEffect fires before the browser repaints the screen while useEffect does not block painting. It also mentions that useLayoutEffect can hurt performance and that useEffect is preferred when possible."
+      },
+      "latencyMs": 2053
+    },
+    {
+      "id": "q12",
+      "type": "summary",
+      "language": "en",
+      "question": "Summarize the step-by-step process the docs recommend in 'Thinking in React'.",
+      "systemAnswerable": true,
+      "answer": "The step-by-step process recommended in 'Thinking in React' is as follows:\n\n1. **Identify** your component's different visual states.\n2. **Determine** what triggers those state changes.\n3. **Represent** the state in memory using `useState`.\n4. **Remove** any non-essential state variables.\n5. **Connect** the event handlers to set the state [3].",
+      "retrievedDocs": [
+        "reference/react/index.md",
+        "learn/thinking-in-react.md",
+        "learn/reacting-to-input-with-state.md",
+        "learn/installation.md",
+        "learn/setup.md"
+      ],
+      "citedDocs": [
+        "learn/reacting-to-input-with-state.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 0.5,
+        "citationPrecision": 0,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 0
+      },
+      "judgeReasons": {
+        "faithfulness": "Every factual claim in the answer is directly supported by passage [3]. The steps listed in the answer match the steps outlined in the passage.",
+        "correctness": "The answer does not cover the five steps in order as required by the criteria. It provides a different set of steps not aligned with the 'Thinking in React' process."
+      },
+      "latencyMs": 1454
+    },
+    {
+      "id": "q13",
+      "type": "summary",
+      "language": "en",
+      "question": "Summarize how React decides when component state is preserved versus reset between re-renders.",
+      "systemAnswerable": true,
+      "answer": "React decides to preserve or reset component state based on the component's position in the UI tree. By default, it preserves the parts of the tree that match the previously rendered component tree. However, if a component is rendered at a different position or given a different `key`, React treats it as a different component and resets its state. This allows for control over when state is preserved or reset during re-renders [1][2][4].",
+      "retrievedDocs": [
+        "learn/preserving-and-resetting-state.md",
+        "learn/managing-state.md",
+        "learn/state-as-a-snapshot.md",
+        "learn/preserving-and-resetting-state.md",
+        "learn/you-might-not-need-an-effect.md"
+      ],
+      "citedDocs": [
+        "learn/preserving-and-resetting-state.md",
+        "learn/managing-state.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information from the passages: React preserves state based on the component's position in the UI tree and resets it if the component is rendered at a different position or given a different key. This is supported by passages [1], [2], and [4].",
+        "correctness": "The answer satisfies all the acceptance criteria by mentioning that state is tied to the position in the render tree, that the same component at the same position preserves state, that a different component or position resets it, and that passing a different key resets state."
+      },
+      "latencyMs": 2279
+    },
+    {
+      "id": "q14",
+      "type": "summary",
+      "language": "en",
+      "question": "Summarize the principles the docs give for structuring state.",
+      "systemAnswerable": true,
+      "answer": "The principles for structuring state are:\n\n1. **Group related state**: Merge state variables that are updated together into a single variable.\n2. **Avoid contradictions in state**: Ensure state pieces do not contradict each other to prevent mistakes.\n3. **Avoid redundant state**: Do not store information that can be calculated from props or existing state.\n4. **Avoid duplication in state**: Reduce duplicated data across state variables to maintain synchronization.\n5. **Avoid deeply nested state**: Prefer a flat structure for state to simplify updates.\n\nThese principles aim to make state easy to update without introducing mistakes [1].",
+      "retrievedDocs": [
+        "learn/choosing-the-state-structure.md",
+        "learn/choosing-the-state-structure.md",
+        "learn/managing-state.md",
+        "learn/managing-state.md",
+        "learn/thinking-in-react.md"
+      ],
+      "citedDocs": [
+        "learn/choosing-the-state-structure.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "All the principles listed in the answer are directly supported by the cited passage [1].",
+        "correctness": "The answer mentions all the required principles: group related state, avoid contradictions in state, avoid redundant state, avoid duplication, and avoid deeply nested state."
+      },
+      "latencyMs": 2688
+    },
+    {
+      "id": "q15",
+      "type": "summary",
+      "language": "en",
+      "question": "According to 'You Might Not Need an Effect', in which situations should I NOT use an Effect?",
+      "systemAnswerable": true,
+      "answer": "You should NOT use an Effect in the following situations:\n\n1. When you want to transform data for rendering. For example, filtering a list before displaying it should be done without an Effect to avoid unnecessary render passes [2][3].\n2. When handling user events. You should manage user events directly in the corresponding event handlers instead of using an Effect [2][3].",
+      "retrievedDocs": [
+        "learn/synchronizing-with-effects.md",
+        "learn/escape-hatches.md",
+        "learn/you-might-not-need-an-effect.md",
+        "learn/removing-effect-dependencies.md",
+        "learn/synchronizing-with-effects.md"
+      ],
+      "citedDocs": [
+        "learn/escape-hatches.md",
+        "learn/you-might-not-need-an-effect.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 0.3333333333333333,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer accurately reflects the information in the passages. It correctly states that Effects should not be used for transforming data for rendering or handling user events, as supported by passages [2] and [3].",
+        "correctness": "The answer correctly mentions two cases where an Effect should not be used: transforming data for rendering and handling user events."
+      },
+      "latencyMs": 1525
+    },
+    {
+      "id": "q16",
+      "type": "reasoning",
+      "language": "en",
+      "question": "I call setNumber(number + 1) three times in one click handler but the number only increases by one. Why, and how do I fix it?",
+      "systemAnswerable": true,
+      "answer": "When you call `setNumber(number + 1)` three times in one click handler, the state variable `number` is always the same for that render, which is `0`. Therefore, each call effectively sets the state to `1`, and after the event handler finishes, React re-renders the component with `number` equal to `1` rather than `3` [1]. \n\nTo fix this, you can pass an updater function to `setNumber`, like `setNumber(n => n + 1)`, which calculates the next state based on the previous state. This way, each call will correctly increment the number based on its current value in the queue [5].",
+      "retrievedDocs": [
+        "learn/state-as-a-snapshot.md",
+        "learn/queueing-a-series-of-state-updates.md",
+        "learn/queueing-a-series-of-state-updates.md",
+        "reference/react/useState.md",
+        "learn/queueing-a-series-of-state-updates.md"
+      ],
+      "citedDocs": [
+        "learn/state-as-a-snapshot.md",
+        "learn/queueing-a-series-of-state-updates.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "Every factual claim in the answer is directly supported by the cited passages. The explanation of why the number only increases by one is supported by [1], and the solution using an updater function is supported by [5].",
+        "correctness": "The answer correctly explains that state is a snapshot fixed within a render and updates are batched, so all three calls use the same value. It also provides the correct fix by suggesting the use of an updater function."
+      },
+      "latencyMs": 2622
+    },
+    {
+      "id": "q17",
+      "type": "reasoning",
+      "language": "en",
+      "question": "My chat component's Effect re-connects to the server on every keystroke. Based on the docs, what is the likely cause and what are the suggested fixes?",
+      "systemAnswerable": true,
+      "answer": "The likely cause of the chat component's Effect re-connecting to the server on every keystroke is that the Effect does not have a dependency array, which leads to re-synchronization after every re-render. To fix this, you should add a dependency array to the Effect and ensure that every reactive value used by the Effect is specified in that array. For example, `roomId` should be included in the array, while `serverUrl`, which is defined outside the component, does not need to be included [2].",
+      "retrievedDocs": [
+        "learn/removing-effect-dependencies.md",
+        "learn/lifecycle-of-reactive-effects.md",
+        "learn/separating-events-from-effects.md",
+        "learn/removing-effect-dependencies.md",
+        "learn/lifecycle-of-reactive-effects.md"
+      ],
+      "citedDocs": [
+        "learn/lifecycle-of-reactive-effects.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 1,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 0
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer correctly identifies the lack of a dependency array as the cause of the issue and suggests adding a dependency array with the appropriate reactive values, as supported by passage [2].",
+        "correctness": "The answer incorrectly attributes the issue to a missing dependency array, rather than a reactive value changing on every keystroke. It also doesn't suggest the correct fixes like restructuring or moving logic."
+      },
+      "latencyMs": 2303
+    },
+    {
+      "id": "q18",
+      "type": "reasoning",
+      "language": "en",
+      "question": "Why is directly mutating an object held in React state a problem, and what does the documentation recommend instead?",
+      "systemAnswerable": true,
+      "answer": "Directly mutating an object held in React state is problematic because it does not trigger re-renders, changes the state in previous render \"snapshots,\" and can complicate the implementation of features like Undo/Redo. The documentation recommends treating all state in React as immutable, creating a new version of the object instead of mutating it, and using the spread syntax `{...obj, something: 'newValue'}` to create copies of objects [1][2][3][4].",
+      "retrievedDocs": [
+        "learn/updating-objects-in-state.md",
+        "learn/updating-objects-in-state.md",
+        "learn/updating-objects-in-state.md",
+        "learn/adding-interactivity.md",
+        "learn/updating-objects-in-state.md"
+      ],
+      "citedDocs": [
+        "learn/updating-objects-in-state.md",
+        "learn/adding-interactivity.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "All factual claims in the answer are supported by the passages. The problems with mutating state and the recommendations for treating state as immutable and using spread syntax are all covered in the cited passages.",
+        "correctness": "The answer explains that directly mutating state does not trigger re-renders because React cannot detect the change, and it recommends creating a new object using spread syntax and passing it to the set function, satisfying all acceptance criteria."
+      },
+      "latencyMs": 2841
+    },
+    {
+      "id": "q19",
+      "type": "reasoning",
+      "language": "en",
+      "question": "Why does the documentation warn against using an array index as the key when the list can be reordered?",
+      "systemAnswerable": true,
+      "answer": "The documentation warns against using an array index as the key because it can lead to problems when trying to re-order a list's items or when inserting/removing list items. Using the array index as a key does not provide a stable identity for the components, which can result in incorrect updates to the DOM tree. This is because React relies on keys to match components with their corresponding items in the list, and if the order changes, the index-based keys can cause React to misinterpret which components correspond to which items, leading to potential issues with state and rendering [1][2].",
+      "retrievedDocs": [
+        "learn/tutorial-tic-tac-toe.md",
+        "learn/rendering-lists.md",
+        "reference/react/ViewTransition.md",
+        "learn/tutorial-tic-tac-toe.md",
+        "learn/updating-arrays-in-state.md"
+      ],
+      "citedDocs": [
+        "learn/tutorial-tic-tac-toe.md",
+        "learn/rendering-lists.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 0.5,
+        "citationPrecision": 0.5,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer is fully supported by the passages. It explains that using an array index as a key can cause problems when reordering or modifying the list, as React uses keys to match components with list items, which is supported by [1] and [2].",
+        "correctness": "The answer explains that using an array index as a key can lead to problems when items are reordered, inserted, or deleted, causing keys to no longer identify the same item, which can lead to bugs."
+      },
+      "latencyMs": 2132
+    },
+    {
+      "id": "q20",
+      "type": "reasoning",
+      "language": "ko",
+      "question": "setState를 호출한 직후에 state 변수를 읽어도 이전 값이 나오는 이유가 뭐야?",
+      "systemAnswerable": true,
+      "answer": "setState를 호출한 직후에 state 변수를 읽어도 이전 값이 나오는 이유는 state가 스냅샷처럼 동작하기 때문입니다. state를 업데이트하는 것은 새로운 렌더를 요청하지만, 이미 실행 중인 이벤트 핸들러 내의 state 변수에는 영향을 미치지 않습니다. 따라서, 이벤트 핸들러 내에서 state를 읽으면 이전 값이 출력됩니다 [4].",
+      "retrievedDocs": [
+        "learn/state-as-a-snapshot.md",
+        "learn/state-as-a-snapshot.md",
+        "learn/queueing-a-series-of-state-updates.md",
+        "reference/react/useReducer.md",
+        "learn/queueing-a-series-of-state-updates.md"
+      ],
+      "citedDocs": [
+        "reference/react/useReducer.md"
+      ],
+      "metrics": {
+        "recall": 1,
+        "reciprocalRank": 1,
+        "citationPrecision": 0,
+        "abstentionCorrect": 1,
+        "faithfulness": 1,
+        "correctness": 1
+      },
+      "judgeReasons": {
+        "faithfulness": "The answer correctly explains that state behaves like a snapshot and updating state requests a new render without affecting the state variable in the already-running event handler, as supported by passage [4].",
+        "correctness": "The answer explains that state behaves like a snapshot, setting state requests a new render, and the state variable inside the currently running code is fixed for that render, satisfying all acceptance criteria."
+      },
+      "latencyMs": 1951
+    },
+    {
+      "id": "q21",
+      "type": "unanswerable",
+      "language": "en",
+      "question": "What does React's useWatchEffect hook do?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "reference/react/useEffect.md",
+        "reference/react/useEffect.md",
+        "reference/react/hooks.md",
+        "reference/react/useEffectEvent.md",
+        "learn/reusing-logic-with-custom-hooks.md"
+      ],
+      "citedDocs": [],
+      "metrics": {
+        "recall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 953
+    },
+    {
+      "id": "q22",
+      "type": "unanswerable",
+      "language": "en",
+      "question": "What does the useFormStatus hook return?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "learn/reusing-logic-with-custom-hooks.md",
+        "learn/reusing-logic-with-custom-hooks.md",
+        "reference/react/hooks.md",
+        "learn/reusing-logic-with-custom-hooks.md",
+        "learn/index.md"
+      ],
+      "citedDocs": [],
+      "metrics": {
+        "recall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 1082
+    },
+    {
+      "id": "q23",
+      "type": "unanswerable",
+      "language": "en",
+      "question": "Which React version first introduced Hooks, and when was it released?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "reference/react/hooks.md",
+        "learn/reusing-logic-with-custom-hooks.md",
+        "learn/index.md",
+        "reference/react/index.md",
+        "learn/typescript.md"
+      ],
+      "citedDocs": [],
+      "metrics": {
+        "recall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 1170
+    },
+    {
+      "id": "q24",
+      "type": "unanswerable",
+      "language": "en",
+      "question": "How does hydrateRoot deal with mismatches between server-rendered HTML and the client render?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "reference/react/useEffect.md",
+        "reference/react/useLayoutEffect.md",
+        "reference/react/useId.md",
+        "reference/react/useLayoutEffect.md",
+        "learn/build-a-react-app-from-scratch.md"
+      ],
+      "citedDocs": [],
+      "metrics": {
+        "recall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 1009
+    },
+    {
+      "id": "q25",
+      "type": "unanswerable",
+      "language": "ko",
+      "question": "React 19는 언제 정식 출시됐어?",
+      "systemAnswerable": false,
+      "answer": "제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)",
+      "retrievedDocs": [
+        "reference/react/legacy.md",
+        "learn/installation.md",
+        "learn/describing-the-ui.md",
+        "reference/react/components.md",
+        "learn/setup.md"
+      ],
+      "citedDocs": [],
+      "metrics": {
+        "recall": null,
+        "reciprocalRank": null,
+        "citationPrecision": null,
+        "abstentionCorrect": 1,
+        "faithfulness": null,
+        "correctness": null
+      },
+      "judgeReasons": {},
+      "latencyMs": 994
+    }
+  ]
+}
