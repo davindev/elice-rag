@@ -1,8 +1,13 @@
 import type { StoredChunk } from '../db.js';
-import type { LlmClient } from '../llm/client.js';
+import type { ChatMessage, LlmClient } from '../llm/client.js';
 import type { Retriever } from '../retrieval/retriever.js';
 import { parseCitations } from './citation-parser.js';
-import { buildUserPrompt, INSUFFICIENT_SENTINEL, RAG_SYSTEM_PROMPT } from './prompts.js';
+import {
+  buildUserPrompt,
+  INSUFFICIENT_SENTINEL,
+  QUERY_REWRITE_PROMPT,
+  RAG_SYSTEM_PROMPT,
+} from './prompts.js';
 
 export interface Citation {
   index: number;
@@ -17,10 +22,18 @@ export interface AskResult {
   answerable: boolean;
   answer: string;
   citations: Citation[];
+  /** 후속 질문을 리라이팅한 경우, 실제 검색에 사용된 독립형 질의 (관측성) */
+  rewrittenQuestion?: string;
   model: string;
   usage: { promptTokens: number; completionTokens: number };
   latencyMs: number;
 }
+
+/** 멀티턴 대화 히스토리 — 서버는 무상태이며 클라이언트가 요청마다 전달한다 */
+export type HistoryMessage = { role: 'user' | 'assistant'; content: string };
+
+/** 생성·리라이팅 프롬프트에 포함할 히스토리 상한 — 오래된 턴은 검색 의도와 무관해지고 토큰만 소비 */
+const MAX_HISTORY_MESSAGES = 6;
 
 export type StreamEvent = { type: 'delta'; text: string } | { type: 'done'; result: AskResult };
 
@@ -35,8 +48,13 @@ export interface RagDeps {
 const REFUSAL_ANSWER =
   '제공된 문서에서 질문에 대한 근거를 찾지 못했습니다. (The indexed documentation does not contain enough evidence to answer this question.)';
 
-export async function ask(deps: RagDeps, question: string, topK: number): Promise<AskResult> {
-  const { result } = await askDetailed(deps, question, topK);
+export async function ask(
+  deps: RagDeps,
+  question: string,
+  topK: number,
+  history: HistoryMessage[] = [],
+): Promise<AskResult> {
+  const { result } = await askDetailed(deps, question, topK, history);
   return result;
 }
 
@@ -45,37 +63,84 @@ export async function askDetailed(
   deps: RagDeps,
   question: string,
   topK: number,
+  history: HistoryMessage[] = [],
 ): Promise<{ result: AskResult; contexts: StoredChunk[] }> {
   const startedAt = performance.now();
-  const contexts = await deps.retriever.retrieve(question, topK);
+
+  // 후속 질문("그거 예시 더")은 단독으로는 검색 의미가 없으므로,
+  // 히스토리가 있을 때만 독립형 질의로 리라이팅해 검색한다 (단일 턴은 비용 0)
+  const searchQuery = history.length === 0 ? question : await rewriteQuery(deps, question, history);
+  const rewritten = searchQuery === question ? undefined : searchQuery;
+
+  const contexts = await deps.retriever.retrieve(searchQuery, topK);
 
   const gate = checkRetrievalGate(deps, contexts, startedAt);
-  if (gate !== null) return { result: gate, contexts };
+  if (gate !== null) {
+    return {
+      result: rewritten === undefined ? gate : { ...gate, rewrittenQuestion: rewritten },
+      contexts,
+    };
+  }
 
   const chat = await deps.llm.chat(deps.llmModel, [
     { role: 'system', content: RAG_SYSTEM_PROMPT },
+    ...recentHistory(history),
     { role: 'user', content: buildUserPrompt(question, contexts) },
   ]);
 
-  return { result: finalize(deps, contexts, chat.content, chat.usage, startedAt), contexts };
+  const result = finalize(deps, contexts, chat.content, chat.usage, startedAt);
+  return {
+    result: rewritten === undefined ? result : { ...result, rewrittenQuestion: rewritten },
+    contexts,
+  };
+}
+
+function recentHistory(history: HistoryMessage[]): ChatMessage[] {
+  return history.slice(-MAX_HISTORY_MESSAGES);
+}
+
+async function rewriteQuery(
+  deps: RagDeps,
+  question: string,
+  history: HistoryMessage[],
+): Promise<string> {
+  const conversation = recentHistory(history)
+    .map((m) => `${m.role}: ${m.content}`)
+    .join('\n');
+  const { content } = await deps.llm.chat(deps.llmModel, [
+    { role: 'system', content: QUERY_REWRITE_PROMPT },
+    { role: 'user', content: `History:\n${conversation}\n\nFollow-up: ${question}\n\nRewritten:` },
+  ]);
+  const rewritten = content.trim();
+  // 리라이팅 실패(빈 출력·비정상 장문)는 원 질문으로 폴백 — 검색이 틀릴지언정 깨지지는 않게
+  if (rewritten.length === 0 || rewritten.length > question.length + 300) return question;
+  return rewritten;
 }
 
 export async function* askStream(
   deps: RagDeps,
   question: string,
   topK: number,
+  history: HistoryMessage[] = [],
 ): AsyncGenerator<StreamEvent> {
   const startedAt = performance.now();
-  const contexts = await deps.retriever.retrieve(question, topK);
+
+  const searchQuery = history.length === 0 ? question : await rewriteQuery(deps, question, history);
+  const rewritten = searchQuery === question ? undefined : searchQuery;
+  const withRewrite = (result: AskResult): AskResult =>
+    rewritten === undefined ? result : { ...result, rewrittenQuestion: rewritten };
+
+  const contexts = await deps.retriever.retrieve(searchQuery, topK);
 
   const gate = checkRetrievalGate(deps, contexts, startedAt);
   if (gate !== null) {
-    yield { type: 'done', result: gate };
+    yield { type: 'done', result: withRewrite(gate) };
     return;
   }
 
   const stream = deps.llm.chatStream(deps.llmModel, [
     { role: 'system', content: RAG_SYSTEM_PROMPT },
+    ...recentHistory(history),
     { role: 'user', content: buildUserPrompt(question, contexts) },
   ]);
 
@@ -103,7 +168,7 @@ export async function* askStream(
     { promptTokens: 0, completionTokens: 0 }, // 스트리밍 응답은 usage 미제공이 일반적
     startedAt,
   );
-  yield { type: 'done', result };
+  yield { type: 'done', result: withRewrite(result) };
 }
 
 function checkRetrievalGate(

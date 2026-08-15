@@ -15,6 +15,19 @@ Rules:
 - Answer in the same language as the question.
 - Be concise and factual.`;
 
+export const QUERY_REWRITE_PROMPT = `You rewrite a follow-up question in a conversation into a self-contained search query for the official React documentation.
+
+Rules:
+- Resolve pronouns and references ("it", "that", "그거") using the conversation history.
+- Preserve the user's intent exactly — do not answer, do not add new requirements.
+- Write the query in English, because the indexed documentation is English. (The answer will still be generated in the user's language — this query is used only for retrieval.)
+- Respond with ONLY the rewritten query.
+
+Example:
+History: user: "useEffect가 뭐야?" / assistant: "useEffect는 컴포넌트를 외부 시스템과 동기화하는 React Hook입니다..."
+Follow-up: "그거 예시 더 알려줘"
+Rewritten: "useEffect usage examples"`;
+
 export function buildUserPrompt(question: string, contexts: StoredChunk[]): string {
   const passages = contexts
     .map((chunk, i) => `[${i + 1}] (${chunk.headingPath.join(' > ')})\n${chunk.content}`)

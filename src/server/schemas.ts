@@ -9,6 +9,19 @@ export const askRequestSchema = z
     topK: z.number().int().min(1).max(20).optional().openapi({
       description: '검색할 컨텍스트 수 (기본값: 서버 설정)',
     }),
+    history: z
+      .array(
+        z.object({
+          role: z.enum(['user', 'assistant']),
+          content: z.string().min(1).max(8000),
+        }),
+      )
+      .max(20)
+      .optional()
+      .openapi({
+        description:
+          '멀티턴 대화 히스토리 (선택). 서버는 무상태이며, 전달 시 후속 질문을 독립형 질의로 리라이팅해 검색한다',
+      }),
   })
   .openapi('AskRequest');
 
@@ -33,6 +46,9 @@ export const askResponseSchema = z
       .openapi({ description: 'false면 문서에서 근거를 찾지 못해 응답을 거부한 것' }),
     answer: z.string(),
     citations: z.array(citationSchema),
+    rewrittenQuestion: z.string().optional().openapi({
+      description: 'history 전달 시 실제 검색에 사용된 리라이팅 질의 (관측용)',
+    }),
     model: z.string(),
     usage: z.object({
       promptTokens: z.number(),
