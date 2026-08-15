@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { swaggerUI } from '@hono/swagger-ui';
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi';
+import { cors } from 'hono/cors';
 import { streamSSE } from 'hono/streaming';
 import { ask, askStream, type RagDeps } from '../rag/pipeline.js';
 import { askRequestSchema, askResponseSchema, errorResponseSchema } from './schemas.js';
@@ -34,9 +37,13 @@ const askRoute = createRoute({
 export function createApp(deps: AppDeps) {
   const app = new OpenAPIHono();
 
+  // 데모·개발 편의용 전체 허용 — 페이지를 다른 origin(file://, 다른 포트)에서 열어도 API 호출 가능.
+  // 인증 없는 로컬 데모 API라 허용 범위를 좁힐 실익이 없음 (운영 전환 시 origin 제한 필요)
+  app.use('*', cors());
+
   app.openapi(askRoute, async (c) => {
-    const { question, topK = deps.defaultTopK } = c.req.valid('json');
-    return c.json(await ask(deps, question, topK), 200);
+    const { question, topK = deps.defaultTopK, history = [] } = c.req.valid('json');
+    return c.json(await ask(deps, question, topK, history), 200);
   });
 
   // SSE는 zod-openapi의 typed response로 표현할 수 없어 별도 엔드포인트로 분리한다.
@@ -47,10 +54,10 @@ export function createApp(deps: AppDeps) {
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues.map((i) => i.message).join(', ') }, 400);
     }
-    const { question, topK = deps.defaultTopK } = parsed.data;
+    const { question, topK = deps.defaultTopK, history = [] } = parsed.data;
 
     return streamSSE(c, async (sse) => {
-      for await (const event of askStream(deps, question, topK)) {
+      for await (const event of askStream(deps, question, topK, history)) {
         if (event.type === 'delta') {
           await sse.writeSSE({ event: 'delta', data: JSON.stringify({ text: event.text }) });
         } else {
@@ -76,6 +83,10 @@ export function createApp(deps: AppDeps) {
   });
   app.get('/doc', swaggerUI({ url: '/openapi.json' }));
   app.get('/healthz', (c) => c.json({ ok: true }));
+
+  // 데모용 챗 UI — 빌드 스텝 없는 단일 정적 파일. 부팅 시 1회 로드(CWD 비의존)
+  const chatPage = readFileSync(path.resolve(import.meta.dirname, 'public/index.html'), 'utf-8');
+  app.get('/', (c) => c.html(chatPage));
 
   return app;
 }

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>elice-rag — React Docs QA</title>
+<style>
+  :root { --accent: #087ea4; --bg: #f6f7f9; --border: #e5e7eb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: #23272f; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 120px; }
+  h1 { font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+  h1 .badge { font-size: 0.7rem; background: var(--accent); color: #fff; border-radius: 999px; padding: 2px 8px; }
+  .hint { color: #6b7280; font-size: 0.85rem; margin-bottom: 20px; }
+  .msg { border-radius: 12px; padding: 12px 16px; margin: 10px 0; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .msg.user { background: var(--accent); color: #fff; margin-left: 15%; }
+  .msg.bot { background: #fff; border: 1px solid var(--border); margin-right: 5%; }
+  .msg.bot.refused { background: #fff7ed; border-color: #fdba74; }
+  .msg.bot code { background: #f1f5f9; border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
+  .cite-mark { color: var(--accent); font-weight: 600; font-size: 0.85em; text-decoration: none; }
+  .citations { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); font-size: 0.85rem; }
+  .citations a { color: var(--accent); text-decoration: none; }
+  .citations li { margin: 3px 0; }
+  .meta { color: #9ca3af; font-size: 0.75rem; margin-top: 8px; }
+  .cursor { display: inline-block; width: 8px; height: 1em; background: var(--accent); vertical-align: text-bottom; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  form { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); padding: 12px 16px; }
+  .row { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; }
+  input[type="text"] { flex: 1; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 1rem; outline-color: var(--accent); }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 10px; padding: 0 20px; font-size: 1rem; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: default; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>elice-rag <span class="badge">React Docs QA</span></h1>
+  <p class="hint">react.dev 문서(learn + reference/react)를 근거로 답변합니다. 문서에 없는 내용은 답하지 않습니다. 예: "What does useState return?"</p>
+  <div id="chat"></div>
+</div>
+<form id="form">
+  <div class="row">
+    <input id="q" type="text" placeholder="질문을 입력하세요" autocomplete="off" autofocus />
+    <button id="send" type="submit">질문</button>
+  </div>
+</form>
+<script>
+const chat = document.getElementById('chat');
+const form = document.getElementById('form');
+const input = document.getElementById('q');
+const send = document.getElementById('send');
+// 멀티턴 히스토리 — 서버는 무상태라 클라이언트가 매 요청에 전달 (최근 8개 메시지만)
+const history = [];
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// 최소 렌더링: 코드 스팬·볼드·[n] 인용 마커만 처리 (외부 라이브러리 없음)
+function renderAnswer(target, text, citations) {
+  const byIndex = new Map((citations ?? []).map((c) => [c.index, c]));
+  let html = escapeHtml(text)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\[(\d{1,2})\]/g, (m, n) => {
+    const c = byIndex.get(Number(n));
+    return c
+      ? `<a class="cite-mark" href="${c.url}" target="_blank" title="${escapeHtml(c.headingPath.join(' > '))}">[${n}]</a>`
+      : m;
+  });
+  target.innerHTML = html;
+}
+
+async function ask(question) {
+  chat.appendChild(el('div', 'msg user', question));
+  const bot = el('div', 'msg bot');
+  const body = el('span', '', '');
+  const cursor = el('span', 'cursor');
+  bot.append(body, cursor);
+  chat.appendChild(bot);
+  bot.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+  let acc = '';
+  try {
+    const res = await fetch('/ask/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, history: history.slice(-8) }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() ?? '';
+      for (const raw of events) {
+        const eventLine = raw.split('\n').find((l) => l.startsWith('event:'));
+        const dataLine = raw.split('\n').find((l) => l.startsWith('data:'));
+        if (!eventLine || !dataLine) continue;
+        const data = JSON.parse(dataLine.slice(5));
+        if (eventLine.includes('delta')) {
+          acc += data.text;
+          body.textContent = acc;
+          bot.scrollIntoView({ block: 'end' });
+        } else if (eventLine.includes('done')) {
+          result = data;
+        }
+      }
+    }
+
+    cursor.remove();
+    if (result === null) throw new Error('done 이벤트 누락');
+    if (!result.answerable) {
+      bot.classList.add('refused');
+      body.textContent = result.answer;
+    } else {
+      renderAnswer(body, result.answer, result.citations);
+      if (result.citations.length > 0) {
+        const cites = el('div', 'citations');
+        cites.appendChild(el('strong', '', '출처'));
+        const ul = el('ul');
+        for (const c of result.citations) {
+          const li = el('li');
+          const a = el('a', '', `[${c.index}] ${c.headingPath.join(' > ')}`);
+          a.href = c.url;
+          a.target = '_blank';
+          li.appendChild(a);
+          ul.appendChild(li);
+        }
+        cites.appendChild(ul);
+        bot.appendChild(cites);
+      }
+    }
+    const metaParts = [`${result.model} · ${result.latencyMs}ms`];
+    if (result.rewrittenQuestion) metaParts.push(`검색 질의: "${result.rewrittenQuestion}"`);
+    bot.appendChild(el('div', 'meta', metaParts.join(' · ')));
+    history.push({ role: 'user', content: question });
+    history.push({ role: 'assistant', content: result.answer });
+  } catch (error) {
+    cursor.remove();
+    bot.classList.add('refused');
+    body.textContent = '오류가 발생했습니다: ' + error.message;
+  }
+  bot.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const question = input.value.trim();
+  if (!question || send.disabled) return;
+  input.value = '';
+  send.disabled = true;
+  await ask(question);
+  send.disabled = false;
+  input.focus();
+});
+</script>
+</body>
+</html>
