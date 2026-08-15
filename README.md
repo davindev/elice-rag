@@ -4,7 +4,7 @@ React 공식 문서를 corpus로 하는 **Citation 기반 RAG QA 서비스**와,
 
 - **Part A** — 문서 Ingest → pgvector 검색 → citation 포함 답변 생성 API (SSE 스트리밍 지원)
 - **Part B** — Gold Set 30문항(앵커 단위 evidence 라벨 포함), 결정적 metric 5종 + LLM-as-Judge 2종, 단일 명령 평가 파이프라인
-- **Part C** — 실험 1: Hybrid Search(dense + FTS RRF) Before/After · 실험 2: 평가 해상도 개선(Gold Set v3)
+- **Part C** — 실험 1: Hybrid Search(FTS RRF) · 실험 2: 평가 해상도 개선(Gold Set v3) · 실험 3: LLM Reranker vs topK 확대
 
 ## 실행 방법
 
@@ -41,10 +41,11 @@ pnpm eval --retriever hybrid   # Part C 실험 (기본값은 dense)
 | `LLM_MODEL` | 답변 생성 모델명 |
 | `EMBEDDING_MODEL` | 임베딩 모델명 |
 | `JUDGE_MODEL` | Eval judge 모델명 (생성 모델과 다른 모델 권장 — self-preference 완화) |
+| `RERANK_MODEL` | (선택) reranker 전용 모델 — 미지정 시 `LLM_MODEL`. reranker만 싼 모델로 바꾸는 ablation용 |
 | `DATABASE_URL` | 기본값 `postgres://rag:rag@localhost:5432/rag` |
-| `RETRIEVAL_MIN_SCORE` | retrieval top-1 유사도 하한 (기본 0 = 비활성, Eval로 튜닝) |
+| `RETRIEVAL_MIN_SCORE` | retrieval 최고 점수 하한 (기본 0 = 비활성, Eval로 튜닝. 점수 의미가 retriever별로 달라 별도 캘리브레이션 필요) |
 | `TOP_K` | 검색 컨텍스트 수 (기본 5) |
-| `RETRIEVER` | `dense`(기본) 또는 `hybrid` — Part C 실험 토글 |
+| `RETRIEVER` | `dense`(기본) / `hybrid` / `rerank` — Part C 실험 토글 |
 
 모든 민감 정보는 `.env`로만 관리하며 커밋되지 않습니다.
 
@@ -142,9 +143,9 @@ curl -N -X POST localhost:3000/ask/stream \
 | multihop | 5 | 서로 다른 문서 2개의 내용을 조합해야 답할 수 있는 질의 (v3에서 추가) |
 | unanswerable | 5 | corpus에 근거가 없는 질의 — hallucination 탐침 |
 
-- 각 문항: `question`, `expectedEvidence`(근거 문서 경로), `expectedAnchors`(근거 **섹션** 라벨 — factoid·multihop 15문항, 총 23개 앵커), `acceptanceCriteria`(자연어 수용 기준), `referenceAnswer`(선택)
+- 각 문항: `question`, `expectedEvidence`(필수 근거 문서 — Recall 판정), `acceptableEvidence`(인용해도 정당한 추가 문서 — Citation Precision 판정 전용, 실험 4의 라벨 감사로 도입), `expectedAnchors`(근거 **섹션** 라벨 — factoid·multihop 15문항, 총 23개 앵커), `acceptanceCriteria`(자연어 수용 기준), `referenceAnswer`(선택)
 - **앵커 라벨의 근거**: react.dev heading 앵커는 문서 구조에 고유하므로 청킹 전략이 바뀌어도 라벨이 유효합니다. 라벨된 앵커 23개 전부가 실제 청크에 존재함을 스크립트로 전수 검증했습니다. 요약·추론 문항은 문서 전체가 근거라 앵커 라벨을 생략(anchorRecall 집계에서 제외).
-- **구축 방법**: 문서를 직접 읽고 작성한 뒤, 모든 `expectedEvidence` 경로가 corpus에 실재하는지, unanswerable 문항의 근거가 corpus 어디에도 없는지 스크립트로 교차 검증했습니다. 그럼에도 라벨 결함 2건이 실제 평가 과정에서 발견되어 보정했습니다 — ① 초안의 "createRoot 사용법" 문항은 corpus에 사용 예가 있어 unanswerable 라벨이 틀림(문항 교체), ② q17의 수용 기준이 문서상 유효한 복수 시나리오 중 하나만 인정(기준 확장, goldset에 보정 이력 기록). 라벨도 코드처럼 결함이 생기고 평가로 검증되어야 한다는 것이 실측된 셈입니다.
+- **구축 방법**: 문서를 직접 읽고 작성한 뒤, 모든 `expectedEvidence` 경로가 corpus에 실재하는지, unanswerable 문항의 근거가 corpus 어디에도 없는지 스크립트로 교차 검증했습니다. 그럼에도 라벨 결함 3건이 실제 평가 과정에서 발견되어 보정했습니다 — ① 초안의 "createRoot 사용법" 문항은 corpus에 사용 예가 있어 unanswerable 라벨이 틀림(문항 교체), ② q17의 수용 기준이 문서상 유효한 복수 시나리오 중 하나만 인정(기준 확장), ③ 챕터 인덱스 페이지 등 동일 내용을 담은 문서가 evidence 라벨에서 누락되어 Citation Precision을 체계적으로 과소평가(실험 4의 라벨 감사로 `acceptableEvidence` 도입). 모든 보정 이력은 goldset의 notes에 기록되어 있습니다. 라벨도 코드처럼 결함이 생기고 평가로 검증되어야 한다는 것이 실측된 셈입니다.
 - **unanswerable 설계**: LLM이 사전지식으로 아는 실존 API(react-dom 소속), corpus에 없는 사실(버전·출시일), 존재하지 않는 API(`useWatchEffect`) 세 가지 하위 유형으로 구성 — 서로 다른 hallucination 경로를 자극합니다.
 - **언어**: corpus가 영어이므로 주 집계는 영어 22문항. 한국어 3문항은 cross-lingual robustness probe로 분리 집계합니다 (한국어 질의 ↔ 영어 문서 매칭은 임베딩 품질·FTS에 별도 변수가 개입하므로 주 지표를 오염시키지 않도록 격리).
 - **편향·한계**: 단일 작성자 라벨(합의 검증 없음), 소규모(문항당 분산 큼), useState 등 핵심 API에 커버리지 편중, 실사용 로그가 아닌 작성 질의(실제 사용자 표현 분포와 다를 수 있음).
@@ -158,7 +159,7 @@ curl -N -X POST localhost:3000/ask/stream \
 | Recall@k (doc) | 기대 근거 문서가 top-k 검색에 포함된 비율 | 생성 품질의 상한은 검색이 결정 — 검색 실패를 생성 문제와 분리해 진단 |
 | Anchor Recall@k (section) | 기대 근거 **섹션**이 top-k 청크에 포함된 비율 | 실험 1에서 doc 단위 Recall이 포화(1.0)되어 변별력을 상실 → 섹션 단위로 해상도를 높인 v3 metric |
 | MRR | 기대 근거 문서의 첫 등장 순위 역수 | 컨텍스트 앞쪽 배치가 인용 정확도에 영향 (순위 민감도) |
-| Citation Precision | 답변이 인용한 문서 중 기대 근거인 비율 | citation이 이 서비스의 핵심 계약 — 엉뚱한 문서 인용을 직접 측정 |
+| Citation Precision | 답변이 인용한 문서 중 정당한 근거(`expectedEvidence` ∪ `acceptableEvidence`)인 비율 | citation이 이 서비스의 핵심 계약 — 엉뚱한 문서 인용을 직접 측정 |
 | Abstention Accuracy / False Refusal Rate | unanswerable 거부율 / answerable 오거부율 | hallucination 방지와 과잉 거부는 트레이드오프 — 양쪽을 모두 측정해야 한 쪽으로의 붕괴를 감지 |
 
 **LLM-as-Judge metric:**
@@ -174,6 +175,26 @@ curl -N -X POST localhost:3000/ask/stream \
 - Judge 모델을 생성 모델과 다른 모델로 사용 (self-preference bias 완화)
 - Judge 프롬프트를 해시로 run 메타데이터에 기록 — 판정 기준 변경 추적
 - **Human alignment (측정 완료)**: baseline run 답변 15건(correctness 10 + faithfulness 5)을 작성자가 judge 점수 비공개 상태에서 동일 rubric으로 직접 채점(`eval/human-labels.jsonl`) → judge와 **정확 일치 86.7%, ±0.5 이내 93.3%** (`scripts/judge-agreement.ts`). 유일한 1.0 등급 불일치(q17)는 judge 결함이 아니라 human 채점과 judge 실행 사이에 수용 기준이 보정된 버전 차이로, 이를 제외하면 정확 일치 92.9%·±0.5 이내 100%. 한계: 라벨러가 goldset 작성자와 동일인이라 기준 해석이 유리하게 정렬됐을 수 있음(독립 라벨러 검증은 향후 과제)
+
+### Metric 달성 목표 (gate / target)
+
+모든 metric에는 두 단계의 목표가 정의되어 있습니다 (`src/eval/targets.ts`, 각 수치의 근거 포함):
+
+- **gate** — 회귀 차단 하한(상한). baseline에서 소표본·judge 분산 여유를 뺀 값으로, `pnpm eval --strict` 실행 시 미달 metric이 있으면 exit 1로 실패해 CI에서 그대로 회귀 게이트로 사용 가능
+- **target** — 개선 목표. 실험으로 도달 가능성이 확인된 수준만 설정 (예: Anchor Recall target 0.85는 실험 3의 topK=10 대조군이 0.893을 기록해 "정답 섹션이 검색 가능함"이 입증됐기 때문)
+
+| metric | gate | target | 목표 설정 근거 요약 |
+|---|---|---|---|
+| Recall@k (doc) | ≥ 0.95 | 1.0 | 문서 검색 실패는 파이프라인 전체를 무효화 |
+| Anchor Recall@k | ≥ 0.60 | 0.85 | 실험 3에서 도달 가능성 입증 (topK=10: 0.893) |
+| MRR | ≥ 0.80 | 0.90 | 상위 배치 품질 회귀 감지 |
+| Citation Precision | ≥ 0.85 | 0.95 | 핵심 계약. 실험 4의 라벨 감사로 측정 오류 제거 후 baseline 0.957 기준으로 상향 |
+| Abstention Accuracy | ≥ 0.75 | 1.0 | hallucination 방지는 만점이 목표, gate는 소표본(n=4) 1문항 노이즈만 허용 |
+| False Refusal Rate | ≤ 0.10 | 0 | abstention과 쌍으로 gate — 과잉 거부 편법 차단 |
+| Faithfulness | ≥ 0.90 | 1.0 | 근거 없는 주장은 citation 신뢰 직접 훼손 |
+| Correctness | ≥ 0.85 | 0.95 | judge 분산(±0.023) 감안한 gate |
+
+run report(`report.md`)의 Summary 표에 metric별 gate/target 대비 상태(🎯 target 달성 / ✅ gate 통과 / ❌ gate 미달)가 함께 표시됩니다.
 
 **Metric의 한계와 맹점 (인지하고 있는 것):**
 
@@ -192,13 +213,13 @@ run마다 `eval/runs/<timestamp>_<retriever>/`에 기록:
 
 재현성 수준을 정직하게 구분하면: **결정적 metric은 동일 인덱스에서 완전 재현**됩니다 (정확 검색 + 동점 시 id 안정 정렬). **생성·judge는 LLM 특성상 완전 결정이 불가능**해, temperature 0으로 분산을 최소화하고 설정 전량을 기록하는 방식으로 관리합니다 (OpenAI 호환 API의 seed는 best-effort라 신뢰하지 않습니다).
 
-### CI 연동 설계 (제안)
+### CI 연동 설계 (gate는 구현 완료, 파이프라인 구성은 제안)
 
-1. **PR마다**: 결정적 metric만 실행 (judge 제외 → 비용 0, 완전 재현) — goldset smoke subset으로 Recall/Citation/Abstention regression gate
-2. **main merge 시**: full eval (judge 포함) → baseline 대비 diff를 PR 코멘트로 게시
-3. **Gate 기준**: 절대 threshold(예: Abstention ≥ 0.8)와 baseline 대비 하락폭(예: Correctness -0.1 이상 하락 시 fail) 병행
+1. **Gate 자체는 이미 동작합니다**: `pnpm eval --strict`가 metric별 gate(`src/eval/targets.ts`) 미달 시 exit 1 — CI job에 그대로 연결 가능
+2. **PR마다**: 결정적 metric만 실행 (judge 제외 → LLM 비용 최소, 완전 재현) — goldset smoke subset으로 Recall/Citation/Abstention regression gate
+3. **main merge 시**: full eval (judge 포함) `--strict` → baseline 대비 diff를 PR 코멘트로 게시
 4. **프롬프트/모델 변경 감지**: config의 프롬프트 해시·모델명이 바뀐 PR은 full eval 강제
-5. judge 비용 관리: full eval 1회 ≈ 문항 20 × judge 2회 — 소규모라 nightly 실행도 부담 없음
+5. judge 비용 관리: full eval 1회 ≈ 문항 25 × judge 2회 — 소규모라 nightly 실행도 부담 없음
 
 ## Part C — 개선 실험
 
@@ -235,6 +256,7 @@ dense 임베딩 단독 검색은 `useLayoutEffect`, `useSyncExternalStore` 같�
 
 - **1차 메커니즘(Recall 향상)은 발휘될 공간이 없었다.** dense 단독으로 이미 Recall@k 1.000, MRR 0.866으로 문서 단위 검색이 사실상 천장이었다. corpus가 96문서로 작고 문서 주제가 서로 뚜렷이 구분되어, 임베딩만으로 doc-level 검색이 포화된 것. "dense가 API 심볼 매칭에 약할 것"이라는 전제는 이 corpus 규모에서는 성립하지 않았다.
 - **재현된 신호는 Citation Precision(+0.056)뿐이다.** 문항 단위 diff에서 변화는 3문항: q01(0.5→1)·q04(0→1)는 FTS가 질문 키워드와 정확히 일치하는 문서를 후보 상위로 끌어올려 모델이 더 정확한 문서를 인용했고, q08(1→0.5)은 소폭 하락했다. 이 패턴은 goldset 보정 전후 두 쌍의 run에서 **동일하게 재현**됐다. 즉 hybrid의 효과는 "못 찾던 문서를 찾게 됨"이 아니라 "**컨텍스트 구성이 바뀌어 모델의 인용 선택이 달라짐**"이다.
+  - ⚠️ **정정 (실험 4)**: 이 citP 차이는 이후 라벨 감사에서 **라벨 커버리지 아티팩트로 판명**됐다 — 보정된 라벨(v4)로 재채점하면 dense와 hybrid 모두 0.957로 동일하다. 이 실험에서 hybrid의 재현되는 이득은 없다는 것이 최종 결론이다.
 - **Correctness 차이는 분산으로 판명됐다.** 초기 run 쌍에서는 hybrid가 +0.028 우위였으나, 재실행에서 dense의 q04가 기준 변경 없이 0.5→1로 흔들리며 동률(0.917)이 됐다 — temperature 0에서도 생성·judge에 ±0.5 등급의 실측 분산이 존재함을 확인. 단일 run의 judge metric 차이는 이 분산보다 커야만 의미가 있다.
 - **평가 중 gold label 결함을 발견·보정했다.** q17의 수용 기준이 문서상 유효한 두 시나리오(의존성 배열 부재 / reactive value 변경) 중 하나만 인정하고 있었고, 시스템 답변은 corpus 챌린지 해설과 사실상 동일한 문서 공인 진단이었다. 기준을 두 경로 모두 허용하도록 보정(goldset에 보정 이력 기록)한 뒤 양쪽 run을 재실행했다 — Eval Harness가 시스템만이 아니라 **gold set 자체의 결함을 드러내는 도구**로도 작동한 사례.
 - **q12(correctness 0)는 hybrid로도 개선되지 않았다** — 검색은 정답 문서를 찾았지만 생성 모델이 함께 검색된 유사 문서(reacting-to-input-with-state의 5단계)를 근거로 선택한 생성 단계 실패로, 검색 개선으로는 풀리지 않는 실패 유형임이 확인됐다.
@@ -262,12 +284,81 @@ dense 임베딩 단독 검색은 `useLayoutEffect`, `useSyncExternalStore` 같�
 - **hybrid는 섹션 수준에서도 검색을 개선하지 못했다**: dense와 hybrid의 Anchor Recall이 완전히 동일하다. FTS+RRF의 재현되는 효과는 세 번의 비교 모두에서 인용 구성(Citation Precision) 하나뿐 — hybrid를 "검색 개선"으로 채택할 근거는 이 corpus에서 없다는 결론이 명확해졌다.
 - **miss의 실체는 전부 "문서는 맞고 섹션이 어긋남"**: anchorRecall < 1인 7문항을 전수 확인한 결과, 정답 문서의 다른 섹션들만 top-5를 채우거나(q02·q04), multi-hop에서 두 번째 문서의 핵심 섹션이 밀려나는(q26~q30) 패턴이었다. 임베딩이 문서 주제는 구분하지만 문서 내 섹션 변별이 약하다는 진단 — 이는 후보를 넓게 뽑아 재정렬하는 **reranker**, multi-hop 질의를 쪼개 검색하는 **query decomposition**이 정확히 겨냥하는 실패 유형이다.
 
+### 실험 3 — LLM Reranker vs topK 확대 (실험 2 진단에 대한 처방)
+
+#### Hypothesis
+
+실험 2의 진단("miss는 전부 정답 문서의 섹션 변별 실패")이 맞다면, dense 후보를 20개로 넓게 뽑아 LLM이 질문과의 관련도를 상대 비교해 top-5를 재선별(listwise rerank)하면 Anchor Recall이 오르고, 더 정확한 컨텍스트가 공급되어 Correctness도 오를 것이다. 대조군으로 **"그냥 topK를 10으로 늘리면 되지 않나"** (기계적 recall 상승)를 함께 측정해, reranker의 가치가 단순 후보 확대와 구분되는지 확인한다.
+
+#### 설계
+
+- rerank: dense 후보 topK×4(=20)개 → LLM(listwise) 재선별 → top-5. 파싱 실패 시 원 순위 fallback이며 **fallback 횟수가 run 메타데이터(`rerankFallbackCount`)에 기록**되어 0이어야 순수한 rerank run임을 보장. rerank 프롬프트 해시·후보 수·모델도 config.json에 기록
+- 대조군: `TOP_K=10 pnpm eval` (dense, 컨텍스트 10개를 생성에 그대로 투입)
+- listwise 선택 근거: pointwise 대비 호출 수 1/20, 후보 간 상대 비교 가능. 트레이드오프는 질의당 LLM 호출 +1(topK=5 기준 입력 ~3.5k 토큰)
+
+#### Result (goldset v3)
+
+rerank는 두 버전을 측정했다 — v1은 후보를 본문만으로 제시했고, **v2는 코드리뷰에서 발견된 설계 결함(생성 프롬프트에는 주는 문서 breadcrumb을 reranker에게만 누락)을 보정**한 버전이다.
+
+| Metric | dense top5 (기준) | rerank v1 | **rerank v2 (+breadcrumb)** | dense top10 (대조군) |
+|---|---|---|---|---|
+| Recall@k (doc) | 0.957 | 0.978 | 0.978 | 1.000 |
+| Anchor Recall@k | 0.643 | 0.750 | 0.786 | **0.893** |
+| MRR | 0.873 | 0.862 | **0.884** | 0.873 |
+| Citation Precision | 0.703 | 0.725 | 0.717 | 0.681 |
+| Correctness | 0.913 | 0.935 | 0.913 | 0.913 |
+| Faithfulness / Abstention / False Refusal | 1.0 / 1.0 / 0 | 동일 | 동일 | 동일 |
+| rerank fallback (파싱 실패→원 순위) | – | 미기록 (관측성 부재) | **3/30 (메타데이터 기록)** | – |
+
+#### Analysis
+
+- **가설의 방향은 맞았지만, 흥미로운 역전이 있었다.** Anchor Recall만 보면 대조군(topK=10, 0.893)이 reranker(0.786)를 이긴다 — 정답 섹션은 대부분 dense top-10 안에 이미 있고, reranker가 후보 20개 중에서 그것을 완벽히 골라내지는 못한다(선별 오류).
+- **그러나 top-5 구성끼리 비교하면 reranker가 검색 지표에서 우세하다.** 같은 컨텍스트 수(5)에서 dense 대비 Anchor Recall +0.143, MRR +0.011(전 구성 중 최고). **"검색 후보에 정답이 있어도 컨텍스트 선별이 품질을 좌우한다"** 가 이 실험의 핵심 수확이다.
+  - ⚠️ **정정 (실험 4)**: 이 표의 Citation Precision 차이(0.681~0.725)는 라벨 감사 후 재채점 시 **모든 구성이 0.957로 수렴** — retriever 간 citP 차이는 라벨 커버리지 아티팩트였다. rerank의 이득은 Anchor Recall·MRR로 한정해 해석해야 한다.
+- **breadcrumb 보정(v1→v2)은 검색 지표를 개선했다** (Anchor Recall 0.750→0.786, MRR 0.862→0.884). 반면 Correctness는 0.935→0.913으로 내려왔는데, 이 폭(판정 1건)은 judge 분산 범위라 v1의 0.935가 우연히 높았을 가능성과 구분할 수 없다 — Correctness 기준의 arm 간 순위 판단은 이 goldset 규모에서는 유보하는 것이 맞다.
+- **실험 무결성의 교훈**: v1은 파싱 실패 fallback이 몇 번 발생했는지 기록조차 없었다(코드리뷰 지적). v2부터 fallback 횟수·rerank 프롬프트 해시·후보 수·모델이 run 메타데이터에 남는다 — v2의 3/30 fallback은 rerank 효과를 과소평가하는 방향의 오염이며, 이제는 그 크기를 알 수 있다.
+- **비용 관점**: reranker는 질의당 LLM 호출 +1(입력 ~3.5k 토큰), topK=10은 생성 입력 2배. 이 corpus 규모에서는 둘 다 허용 범위이나, 프로덕션 채택 기준은 지연 요구사항에 달려 있다.
+- **한계**: 라벨된 15문항 기준의 최적화가 goldset 과적합일 위험을 인지하고 있다. 방향 확정에는 judge 반복 실행과 goldset 확장이 필요하다.
+
+### 실험 4 — Citation Precision 원인 분해와 라벨 감사 (goldset v4)
+
+#### Hypothesis
+
+Citation Precision(0.70~0.75)을 target(0.8)까지 올리려면 먼저 감점의 실체를 알아야 한다. 감점에는 두 성분이 섞여 있을 수 있다: (a) 모델이 실제로 엉뚱한 문서를 인용, (b) **답을 실제로 뒷받침하는 문서인데 gold label에 없어 오답 처리되는 측정 오류**. corpus에 챕터 인덱스 페이지(managing-state, adding-interactivity 등)가 하위 문서 내용을 요약·중복 보유하므로 (b)의 비중이 클 것으로 가설을 세웠다.
+
+#### 설계
+
+1. v3의 모든 run(5개)에서 관측된 "라벨 밖 인용" 문서의 합집합을 수집
+2. 각 문서가 해당 질문의 근거를 실제로 담고 있는지 **corpus 원문 대조로 전수 검증** (시스템 출력은 후보 힌트일 뿐, 확정은 원문 기준)
+3. 검증 통과 문서를 새 필드 `acceptableEvidence`에 추가 — **`expectedEvidence`(필수 근거, Recall용)와 분리**한 이유: 문서를 recall 라벨에 추가하면 "기대 문서를 모두 찾아야" 하는 recall이 부당하게 어려워짐. "필요한 것을 찾았는가"와 "인용이 정당한가"는 기준 집합이 다르다
+4. 라벨 효과를 run 분산과 분리하기 위해, **기존 run들의 저장된 인용을 라벨만 바꿔 오프라인 재채점**
+
+#### Result
+
+검증 결과 라벨 밖 인용 문서 중 q12(다른 개념의 절차를 담은 문서) 1건을 제외한 전부가 정당한 근거로 확인됨 → 17문항에 acceptableEvidence 추가 (goldset v4).
+
+동일 인용을 라벨만 바꿔 재채점 (run 분산 완전 배제):
+
+| run | citP (v3 라벨) | citP (v4 라벨) |
+|---|---|---|
+| dense top5 | 0.703 | **0.957** |
+| hybrid | 0.746 | **0.957** |
+| rerank v2 | 0.717 | **0.957** |
+| dense top10 | 0.681 | 0.957 |
+
+#### Analysis
+
+- **가설 적중**: 감점의 대부분이 측정 오류였다. 시스템의 실제 인용 정밀도는 처음부터 ~0.96이었고, target(0.8)은 이미 달성 상태였다. 남은 갭(1.0 − 0.957)은 q12의 진짜 오인용 1건뿐이다.
+- **실험 1·3의 결론 일부를 정정한다**: retriever 간 citP 차이(dense 0.703 vs hybrid 0.746 등)로 "hybrid/rerank가 인용 구성을 개선한다"고 해석했으나, v4 라벨로 재채점하면 **모든 구성이 0.957로 수렴**한다. 그 차이는 "각 retriever가 올린 문서를 라벨이 커버했는지"의 아티팩트였다. 따라서 hybrid의 재현되는 이득은 사라졌고, rerank의 이득은 Anchor Recall·MRR에만 남는다. 각 실험 섹션에 정정 주석을 달았다.
+- **교훈**: metric이 낮을 때 "시스템 개선"으로 직행하기 전에 감점의 원인을 분해해야 한다. 이번 케이스에서 프롬프트 튜닝부터 했다면 존재하지 않는 문제를 풀며 라벨 노이즈에 과적합했을 것이다.
+
 ### Next Steps
 
-- **Reranker (cross-encoder)**: 후보 20~30개를 재정렬 — 실험 2에서 진단된 "같은 문서 내 섹션 변별 실패"를 직접 겨냥. Anchor Recall이 판정 지표
+- **Reranker 선별 품질 개선**: 정답 섹션이 후보 안에 있는데 못 고르는 케이스가 여전히 병목(0.786 vs 후보 내 존재율 0.893) — 후보 30개 확대, rerank 프롬프트에 선택 근거 서술 요구, 파싱 실패 3/30건의 원인 분석·프롬프트 보강
+- **rerank(10) 하이브리드**: top-10의 recall(0.893)과 reranker의 정밀도를 결합 — 20→10 rerank 구성 측정
 - **Query decomposition**: multi-hop 질의를 하위 질의로 분해해 각각 검색 후 병합 — q26~q30의 "두 번째 문서 섹션 누락" 대응
 - **Citation Precision의 섹션 단위 채점**: 인용 채점을 anchor 수준으로 내려 평가 해상도 정합성 완성
-- **Judge 반복 실행**: 동일 run을 judge만 3회 반복해 판정 분산을 실측 — 개선 폭이 분산보다 큰지 검정
+- **Judge 반복 실행**: 동일 run을 judge만 3회 반복해 판정 분산을 실측 — 실험 3의 Correctness 차이가 분산보다 큰지 검정
 - **Gold Set 확장**: 실사용 질의 로그 기반 문항 추가, 복수 라벨러 합의로 라벨 신뢰도 향상
 
 ## 한계점 및 알려진 이슈
@@ -276,4 +367,5 @@ dense 임베딩 단독 검색은 `useLayoutEffect`, `useSyncExternalStore` 같�
 - **threshold 미튜닝 상태**: `RETRIEVAL_MIN_SCORE` 기본 0(비활성) — sentinel 프로토콜이 1차 방어를 담당하며, gate는 Eval 데이터 축적 후 튜닝
 - **한국어 질의**: 영어 corpus 대상 cross-lingual 검색 품질은 임베딩 모델에 전적으로 의존하며, FTS(english) 경로는 한국어 질의에 기여하지 못함
 - **usage 미수집(스트리밍)**: SSE 경로는 토큰 usage를 0으로 반환 (OpenAI 호환 스트리밍의 usage 옵션 지원 여부가 게이트웨이별로 달라 비활성)
+- **rerank 파싱 실패 fallback**: reranker의 LLM 출력에서 순위 배열을 추출하지 못하면 dense 원 순위를 사용 — 실패 횟수는 run 메타데이터에 기록되지만, fallback이 발생한 run은 rerank 효과를 과소평가하는 방향으로 편향됨
 - **단일 인스턴스 전제**: 커넥션 풀·상태 관리가 단일 프로세스 기준 — 수평 확장 시 재검토 필요
