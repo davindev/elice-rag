@@ -3,8 +3,8 @@
 React 공식 문서를 corpus로 하는 **Citation 기반 RAG QA 서비스**와, 그 품질을 측정하는 **자체 Eval Harness**, 그리고 Eval을 활용한 **개선 실험**입니다.
 
 - **Part A** — 문서 Ingest → pgvector 검색 → citation 포함 답변 생성 API (SSE 스트리밍 지원)
-- **Part B** — Gold Set 25문항, 결정적 metric 4종 + LLM-as-Judge 2종, 단일 명령 평가 파이프라인
-- **Part C** — Hybrid Search(dense + FTS RRF) 개선 실험, Before/After 비교
+- **Part B** — Gold Set 30문항(앵커 단위 evidence 라벨 포함), 결정적 metric 5종 + LLM-as-Judge 2종, 단일 명령 평가 파이프라인
+- **Part C** — 실험 1: Hybrid Search(dense + FTS RRF) Before/After · 실험 2: 평가 해상도 개선(Gold Set v3)
 
 ## 실행 방법
 
@@ -132,16 +132,18 @@ curl -N -X POST localhost:3000/ask/stream \
 
 ## Part B — Eval Harness
 
-### Gold Set (eval/goldset.jsonl, 25문항)
+### Gold Set (eval/goldset.jsonl, 30문항)
 
 | 유형 | 수 | 설명 |
 |---|---|---|
 | factoid | 10 | 단일 근거 사실 질의 |
 | summary | 5 | 문서 내용 요약 (생성형) |
 | reasoning | 5 | 문서 개념을 시나리오에 적용하는 추론 (생성형) |
+| multihop | 5 | 서로 다른 문서 2개의 내용을 조합해야 답할 수 있는 질의 (v3에서 추가) |
 | unanswerable | 5 | corpus에 근거가 없는 질의 — hallucination 탐침 |
 
-- 각 문항: `question`, `expectedEvidence`(근거 문서 경로), `acceptanceCriteria`(자연어 수용 기준), `referenceAnswer`(선택)
+- 각 문항: `question`, `expectedEvidence`(근거 문서 경로), `expectedAnchors`(근거 **섹션** 라벨 — factoid·multihop 15문항, 총 23개 앵커), `acceptanceCriteria`(자연어 수용 기준), `referenceAnswer`(선택)
+- **앵커 라벨의 근거**: react.dev heading 앵커는 문서 구조에 고유하므로 청킹 전략이 바뀌어도 라벨이 유효합니다. 라벨된 앵커 23개 전부가 실제 청크에 존재함을 스크립트로 전수 검증했습니다. 요약·추론 문항은 문서 전체가 근거라 앵커 라벨을 생략(anchorRecall 집계에서 제외).
 - **구축 방법**: 문서를 직접 읽고 작성한 뒤, 모든 `expectedEvidence` 경로가 corpus에 실재하는지, unanswerable 문항의 근거가 corpus 어디에도 없는지 스크립트로 교차 검증했습니다. 그럼에도 라벨 결함 2건이 실제 평가 과정에서 발견되어 보정했습니다 — ① 초안의 "createRoot 사용법" 문항은 corpus에 사용 예가 있어 unanswerable 라벨이 틀림(문항 교체), ② q17의 수용 기준이 문서상 유효한 복수 시나리오 중 하나만 인정(기준 확장, goldset에 보정 이력 기록). 라벨도 코드처럼 결함이 생기고 평가로 검증되어야 한다는 것이 실측된 셈입니다.
 - **unanswerable 설계**: LLM이 사전지식으로 아는 실존 API(react-dom 소속), corpus에 없는 사실(버전·출시일), 존재하지 않는 API(`useWatchEffect`) 세 가지 하위 유형으로 구성 — 서로 다른 hallucination 경로를 자극합니다.
 - **언어**: corpus가 영어이므로 주 집계는 영어 22문항. 한국어 3문항은 cross-lingual robustness probe로 분리 집계합니다 (한국어 질의 ↔ 영어 문서 매칭은 임베딩 품질·FTS에 별도 변수가 개입하므로 주 지표를 오염시키지 않도록 격리).
@@ -153,7 +155,8 @@ curl -N -X POST localhost:3000/ask/stream \
 
 | Metric | 정의 | 선정 이유 |
 |---|---|---|
-| Recall@k | 기대 근거 문서가 top-k 검색에 포함된 비율 | 생성 품질의 상한은 검색이 결정 — 검색 실패를 생성 문제와 분리해 진단 |
+| Recall@k (doc) | 기대 근거 문서가 top-k 검색에 포함된 비율 | 생성 품질의 상한은 검색이 결정 — 검색 실패를 생성 문제와 분리해 진단 |
+| Anchor Recall@k (section) | 기대 근거 **섹션**이 top-k 청크에 포함된 비율 | 실험 1에서 doc 단위 Recall이 포화(1.0)되어 변별력을 상실 → 섹션 단위로 해상도를 높인 v3 metric |
 | MRR | 기대 근거 문서의 첫 등장 순위 역수 | 컨텍스트 앞쪽 배치가 인용 정확도에 영향 (순위 민감도) |
 | Citation Precision | 답변이 인용한 문서 중 기대 근거인 비율 | citation이 이 서비스의 핵심 계약 — 엉뚱한 문서 인용을 직접 측정 |
 | Abstention Accuracy / False Refusal Rate | unanswerable 거부율 / answerable 오거부율 | hallucination 방지와 과잉 거부는 트레이드오프 — 양쪽을 모두 측정해야 한 쪽으로의 붕괴를 감지 |
@@ -174,7 +177,7 @@ curl -N -X POST localhost:3000/ask/stream \
 
 **Metric의 한계와 맹점 (인지하고 있는 것):**
 
-- Recall/Citation은 **문서 단위** 매칭 — 같은 문서의 엉뚱한 섹션을 인용해도 정답 처리됩니다. 청크 단위 gold label은 청킹 전략을 바꾸는 실험(Part C 후보)과 양립할 수 없어 의도적으로 문서 단위를 선택한 트레이드오프입니다.
+- Citation Precision은 여전히 **문서 단위** 매칭 — 같은 문서의 엉뚱한 섹션을 인용해도 정답 처리됩니다. (Recall의 이 한계는 v3의 Anchor Recall로 해소했으나, 인용의 섹션 단위 채점은 미적용 상태)
 - Citation Precision만 있고 **Citation Recall**(근거 문서를 빠짐없이 인용했는가)은 없습니다 — 다중 근거 문항이 적어 분모가 불안정하기 때문입니다.
 - Faithfulness judge는 "컨텍스트에 있는 내용인가"만 보므로, 컨텍스트 자체가 질문과 무관하면 무관한 답변도 faithful로 판정할 수 있습니다 (Correctness가 이를 보완).
 - Judge 점수는 rubric 해석에 의존하며 완전히 결정적이지 않습니다 — 동일 입력 재실행 시 ±0.5 등급 흔들림 가능.
@@ -197,22 +200,24 @@ run마다 `eval/runs/<timestamp>_<retriever>/`에 기록:
 4. **프롬프트/모델 변경 감지**: config의 프롬프트 해시·모델명이 바뀐 PR은 full eval 강제
 5. judge 비용 관리: full eval 1회 ≈ 문항 20 × judge 2회 — 소규모라 nightly 실행도 부담 없음
 
-## Part C — 개선 실험: Hybrid Search
+## Part C — 개선 실험
 
-### Hypothesis
+### 실험 1 — Hybrid Search (dense + FTS RRF)
+
+#### Hypothesis
 
 dense 임베딩 단독 검색은 `useLayoutEffect`, `useSyncExternalStore` 같은 **API 심볼의 정확 매칭 질의에 약하다** (임베딩 공간에서 유사 API끼리 가까워 혼동). Postgres FTS 키워드 검색을 RRF로 융합하면 심볼 매칭이 보강되어 **Recall@k와 MRR이 상승**하고, 더 정확한 컨텍스트가 공급되므로 **Citation Precision과 Correctness도 동반 상승**할 것이다.
 
-### 설계
+#### 설계
 
 - Before: `pnpm eval --retriever dense` / After: `pnpm eval --retriever hybrid`
 - hybrid: dense와 FTS 각각 topK×4 후보 수집 → RRF(K=60) 융합 → topK
 - RRF는 순위만 사용하므로 cosine과 ts_rank의 스케일 차이가 문제되지 않으며, BM25 별도 구현 없이 ts_rank로 충분합니다
 - 동일 goldset·동일 모델·동일 프롬프트, retriever만 변경
 
-### Result
+#### Result
 
-생성 `gpt-4o-mini` / 임베딩 `text-embedding-3-small` / judge `gpt-4o`, topK=5, temperature 0 (상세 설정·해시는 `eval/runs/*/config.json`):
+생성 `gpt-4o-mini` / 임베딩 `text-embedding-3-small` / judge `gpt-4o`, topK=5, temperature 0, goldset v2 25문항 기준 (상세 설정·해시는 `eval/runs/*/config.json`):
 
 | Metric | dense (before) | hybrid (after) | Δ |
 |---|---|---|---|
@@ -224,7 +229,7 @@ dense 임베딩 단독 검색은 `useLayoutEffect`, `useSyncExternalStore` 같�
 | Faithfulness | 1.000 | 1.000 | 0 |
 | Correctness | 0.917 | 0.917 | 0 |
 
-### Analysis
+#### Analysis
 
 **가설은 부분적으로만 적중했고, 예상한 경로가 아니었다.**
 
@@ -234,12 +239,35 @@ dense 임베딩 단독 검색은 `useLayoutEffect`, `useSyncExternalStore` 같�
 - **평가 중 gold label 결함을 발견·보정했다.** q17의 수용 기준이 문서상 유효한 두 시나리오(의존성 배열 부재 / reactive value 변경) 중 하나만 인정하고 있었고, 시스템 답변은 corpus 챌린지 해설과 사실상 동일한 문서 공인 진단이었다. 기준을 두 경로 모두 허용하도록 보정(goldset에 보정 이력 기록)한 뒤 양쪽 run을 재실행했다 — Eval Harness가 시스템만이 아니라 **gold set 자체의 결함을 드러내는 도구**로도 작동한 사례.
 - **q12(correctness 0)는 hybrid로도 개선되지 않았다** — 검색은 정답 문서를 찾았지만 생성 모델이 함께 검색된 유사 문서(reacting-to-input-with-state의 5단계)를 근거로 선택한 생성 단계 실패로, 검색 개선으로는 풀리지 않는 실패 유형임이 확인됐다.
 
+### 실험 2 — 평가 해상도 개선 (Gold Set v3: 앵커 라벨 + multi-hop)
+
+#### Hypothesis
+
+실험 1에서 doc 단위 Recall이 1.0으로 포화되어 검색 실험의 분해능이 사라졌다. "corpus가 쉬운 것"이 아니라 "**metric의 해상도가 낮은 것**"이 원인이라는 가설 하에, (a) 근거 라벨을 문서 → **섹션(heading 앵커)** 단위로 내리고 (b) 두 문서를 조합해야 답할 수 있는 **multi-hop 5문항**을 추가하면, 검색 metric에 변별력이 생겨 dense vs hybrid의 차이(또는 차이 없음)를 실제로 판정할 수 있게 될 것이라 기대했다.
+
+#### Result (goldset v3, 30문항)
+
+| Metric | dense | hybrid | 비고 |
+|---|---|---|---|
+| Recall@k (doc) | 0.957 | 0.957 | multi-hop 추가로 천장 아래로 내려옴 |
+| **Anchor Recall@k** | **0.643** | **0.643** | 섹션 단위에서 큰 개선 여지 노출 |
+| MRR | 0.873 | 0.873 | |
+| Citation Precision | 0.703 | 0.746 | 실험 1과 동일한 +0.04~0.06 패턴 3번째 재현 |
+| Correctness | 0.913 | 0.913 | |
+| Abstention / False Refusal / Faithfulness | 1.000 / 0 / 1.000 | 동일 | 회귀 없음 |
+
+#### Analysis
+
+- **가설 적중**: 같은 시스템·같은 corpus에서 metric 해상도만 높였는데 Anchor Recall 0.643으로 개선 여지가 드러났다. "corpus가 쉽다"는 인상은 측정 도구의 문제였음이 확인됐다.
+- **hybrid는 섹션 수준에서도 검색을 개선하지 못했다**: dense와 hybrid의 Anchor Recall이 완전히 동일하다. FTS+RRF의 재현되는 효과는 세 번의 비교 모두에서 인용 구성(Citation Precision) 하나뿐 — hybrid를 "검색 개선"으로 채택할 근거는 이 corpus에서 없다는 결론이 명확해졌다.
+- **miss의 실체는 전부 "문서는 맞고 섹션이 어긋남"**: anchorRecall < 1인 7문항을 전수 확인한 결과, 정답 문서의 다른 섹션들만 top-5를 채우거나(q02·q04), multi-hop에서 두 번째 문서의 핵심 섹션이 밀려나는(q26~q30) 패턴이었다. 임베딩이 문서 주제는 구분하지만 문서 내 섹션 변별이 약하다는 진단 — 이는 후보를 넓게 뽑아 재정렬하는 **reranker**, multi-hop 질의를 쪼개 검색하는 **query decomposition**이 정확히 겨냥하는 실패 유형이다.
+
 ### Next Steps
 
-- **검색 난이도 재설계**: doc-level Recall이 포화된 상태에서는 검색 실험의 분해능이 없다 — 청크 단위 evidence 라벨 도입 또는 다중 문서 조합(multi-hop) 문항 추가로 검색 metric의 천장을 낮추는 것이 선행 과제
-- **생성 단계 실패 대응**: q12·q17 유형(검색은 성공, 근거 선택·적용 실패)에는 컨텍스트 수 축소(topK 튜닝), 유사 문서 간 구분 강화 프롬프트, reranker(cross-encoder)가 후보
+- **Reranker (cross-encoder)**: 후보 20~30개를 재정렬 — 실험 2에서 진단된 "같은 문서 내 섹션 변별 실패"를 직접 겨냥. Anchor Recall이 판정 지표
+- **Query decomposition**: multi-hop 질의를 하위 질의로 분해해 각각 검색 후 병합 — q26~q30의 "두 번째 문서 섹션 누락" 대응
+- **Citation Precision의 섹션 단위 채점**: 인용 채점을 anchor 수준으로 내려 평가 해상도 정합성 완성
 - **Judge 반복 실행**: 동일 run을 judge만 3회 반복해 판정 분산을 실측 — 개선 폭이 분산보다 큰지 검정
-- **Query rewriting**: 한국어 질의를 영어로 변환 후 검색 — ko probe 성능 개선 가설
 - **Gold Set 확장**: 실사용 질의 로그 기반 문항 추가, 복수 라벨러 합의로 라벨 신뢰도 향상
 
 ## 한계점 및 알려진 이슈
