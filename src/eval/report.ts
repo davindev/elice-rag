@@ -16,6 +16,8 @@ export interface QuestionResult {
   citedChunks: { index: number; chunkId: string; docPath: string; url: string; content: string }[];
   metrics: {
     recall: number;
+    /** 앵커(섹션) 단위 recall — expectedAnchors 라벨이 있는 문항만 (없으면 NaN) */
+    anchorRecall: number;
     reciprocalRank: number;
     citationPrecision: number;
     /** unanswerable 문항: 거부했으면 1. answerable 문항: 거부 안 했으면 1 */
@@ -46,6 +48,7 @@ export interface RunConfig {
 export interface Summary {
   // 주 집계는 en 문항만 — ko 문항은 cross-lingual robustness probe로 분리 집계
   recallAtK: number;
+  anchorRecallAtK: number;
   mrr: number;
   citationPrecision: number;
   abstentionAccuracy: number;
@@ -65,7 +68,7 @@ export function summarize(results: QuestionResult[]): Summary {
   const koUnanswerable = ko.filter((r) => r.type === 'unanswerable');
 
   const byType: Summary['byType'] = {};
-  for (const type of ['factoid', 'summary', 'reasoning', 'unanswerable']) {
+  for (const type of ['factoid', 'summary', 'reasoning', 'multihop', 'unanswerable']) {
     const items = en.filter((r) => r.type === type);
     if (items.length === 0) continue;
     byType[type] = {
@@ -77,6 +80,7 @@ export function summarize(results: QuestionResult[]): Summary {
 
   return {
     recallAtK: mean(enAnswerable.map((r) => r.metrics.recall)),
+    anchorRecallAtK: mean(enAnswerable.map((r) => r.metrics.anchorRecall)),
     mrr: mean(enAnswerable.map((r) => r.metrics.reciprocalRank)),
     citationPrecision: mean(enAnswerable.map((r) => r.metrics.citationPrecision)),
     abstentionAccuracy: mean(enUnanswerable.map((r) => r.metrics.abstentionCorrect)),
@@ -124,7 +128,8 @@ export function renderMarkdown(
     '',
     '| metric | score |',
     '|---|---|',
-    `| Recall@k | ${fmt(summary.recallAtK)} |`,
+    `| Recall@k (doc) | ${fmt(summary.recallAtK)} |`,
+    `| Anchor Recall@k (section) | ${fmt(summary.anchorRecallAtK)} |`,
     `| MRR | ${fmt(summary.mrr)} |`,
     `| Citation Precision | ${fmt(summary.citationPrecision)} |`,
     `| Abstention Accuracy (unanswerable) | ${fmt(summary.abstentionAccuracy)} |`,
@@ -146,8 +151,8 @@ export function renderMarkdown(
     '',
     '## 문항별 결과',
     '',
-    '| id | type | lang | answered | recall | RR | citP | abst | faith | corr | latency |',
-    '|---|---|---|---|---|---|---|---|---|---|---|',
+    '| id | type | lang | answered | recall | aRecall | RR | citP | abst | faith | corr | latency |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|',
     ...results.map((r) =>
       [
         r.id,
@@ -155,6 +160,7 @@ export function renderMarkdown(
         r.language,
         r.systemAnswerable ? 'Y' : 'refuse',
         fmt(r.metrics.recall),
+        fmt(r.metrics.anchorRecall),
         fmt(r.metrics.reciprocalRank),
         fmt(r.metrics.citationPrecision),
         fmt(r.metrics.abstentionCorrect),

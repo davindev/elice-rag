@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS chunks (
   id TEXT PRIMARY KEY, -- 청크 내용 해시 (멱등 재인덱싱)
   doc_path TEXT NOT NULL,
   heading_path TEXT[] NOT NULL,
+  anchors TEXT[] NOT NULL DEFAULT '{}', -- 청크에 포함된 섹션 앵커 (앵커 단위 evidence 매칭용)
   url TEXT NOT NULL,
   content TEXT NOT NULL,
   token_count INTEGER NOT NULL,

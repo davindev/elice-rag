@@ -16,11 +16,12 @@ export async function searchFts(
     id: string;
     doc_path: string;
     heading_path: string[];
+    anchors: string[];
     url: string;
     content: string;
     score: number;
   }>(
-    `SELECT id, doc_path, heading_path, url, content,
+    `SELECT id, doc_path, heading_path, anchors, url, content,
             ts_rank(tsv, query) AS score
      FROM chunks, websearch_to_tsquery('english', $1) query
      WHERE tsv @@ query
@@ -32,6 +33,7 @@ export async function searchFts(
     id: row.id,
     docPath: row.doc_path,
     headingPath: row.heading_path,
+    anchors: row.anchors,
     url: row.url,
     content: row.content,
     score: row.score,

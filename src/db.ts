@@ -5,6 +5,7 @@ export interface StoredChunk {
   id: string;
   docPath: string;
   headingPath: string[];
+  anchors: string[];
   url: string;
   content: string;
   score: number;
@@ -34,13 +35,14 @@ export async function upsertChunks(
         throw new Error(`청크 ${chunk.id}에 대응하는 임베딩이 없습니다 (index ${i})`);
       }
       await client.query(
-        `INSERT INTO chunks (id, doc_path, heading_path, url, content, token_count, embedding)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO chunks (id, doc_path, heading_path, anchors, url, content, token_count, embedding)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (id) DO NOTHING`,
         [
           chunk.id,
           chunk.docPath,
           chunk.headingPath,
+          chunk.anchors,
           urlOf(chunk),
           chunk.content,
           chunk.tokenCount,
@@ -82,11 +84,12 @@ export async function searchDense(
     id: string;
     doc_path: string;
     heading_path: string[];
+    anchors: string[];
     url: string;
     content: string;
     score: number;
   }>(
-    `SELECT id, doc_path, heading_path, url, content,
+    `SELECT id, doc_path, heading_path, anchors, url, content,
             1 - (embedding <=> $1::vector) AS score
      FROM chunks
      ORDER BY embedding <=> $1::vector, id
@@ -97,6 +100,7 @@ export async function searchDense(
     id: row.id,
     docPath: row.doc_path,
     headingPath: row.heading_path,
+    anchors: row.anchors,
     url: row.url,
     content: row.content,
     score: row.score,

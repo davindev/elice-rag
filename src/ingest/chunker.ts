@@ -7,8 +7,10 @@ export interface Chunk {
   docPath: string;
   /** [문서 제목, h2, h3, ...] 형태의 breadcrumb */
   headingPath: string[];
-  /** react.dev heading 앵커 주석에서 추출한 ID — citation URL 조각 */
+  /** react.dev heading 앵커 주석에서 추출한 ID — citation URL 조각 (청크 시작 섹션 기준) */
   anchor: string | null;
+  /** 이 청크에 포함된 모든 섹션의 앵커 — 앵커 단위 evidence 매칭용 (청킹 전략과 무관한 문서 고유 키) */
+  anchors: string[];
   content: string;
   tokenCount: number;
 }
@@ -52,6 +54,7 @@ export function chunkDocument(
   let pending: {
     headingPath: string[];
     anchor: string | null;
+    anchors: string[];
     texts: string[];
     tokens: number;
   } | null = null;
@@ -61,7 +64,9 @@ export function chunkDocument(
     if (!pending) return;
     const content = pending.texts.join('\n\n').trim();
     if (content.length > 0) {
-      chunks.push(makeChunk(docPath, pending.headingPath, pending.anchor, content));
+      chunks.push(
+        makeChunk(docPath, pending.headingPath, pending.anchor, pending.anchors, content),
+      );
     }
     pending = null;
   };
@@ -80,10 +85,12 @@ export function chunkDocument(
     const text = sectionText(section);
     const tokens = countTokens(text);
 
+    const sectionAnchors = section.anchor === null ? [] : [section.anchor];
+
     if (tokens > maxTokens) {
       flush();
       for (const part of splitOversized(text, maxTokens)) {
-        chunks.push(makeChunk(docPath, headingPath, section.anchor, part));
+        chunks.push(makeChunk(docPath, headingPath, section.anchor, sectionAnchors, part));
       }
       pendingH2 = currentH2;
       continue;
@@ -92,9 +99,16 @@ export function chunkDocument(
     if (pending && pendingH2 === currentH2 && pending.tokens + tokens <= maxTokens) {
       pending.texts.push(text);
       pending.tokens += tokens;
+      pending.anchors.push(...sectionAnchors);
     } else {
       flush();
-      pending = { headingPath, anchor: section.anchor, texts: [text], tokens };
+      pending = {
+        headingPath,
+        anchor: section.anchor,
+        anchors: sectionAnchors,
+        texts: [text],
+        tokens,
+      };
       pendingH2 = currentH2;
     }
   }
@@ -186,8 +200,9 @@ function makeChunk(
   docPath: string,
   headingPath: string[],
   anchor: string | null,
+  anchors: string[],
   content: string,
 ): Chunk {
   const id = createHash('sha256').update(`${docPath}\n${content}`).digest('hex').slice(0, 24);
-  return { id, docPath, headingPath, anchor, content, tokenCount: countTokens(content) };
+  return { id, docPath, headingPath, anchor, anchors, content, tokenCount: countTokens(content) };
 }

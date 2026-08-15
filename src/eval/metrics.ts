@@ -40,6 +40,22 @@ export function citationPrecision(expectedDocs: string[], citations: Citation[])
   return citedDocs.filter((doc) => expected.has(doc)).length / citedDocs.length;
 }
 
+/**
+ * Anchor Recall@k: 기대 근거 섹션(문서+앵커) 중 top-k 청크에 포함된 비율.
+ * 문서 단위 Recall이 포화된 corpus에서 검색기의 섹션 수준 변별력을 측정한다.
+ * 앵커는 문서 구조에서 오므로 청킹 전략이 바뀌어도 라벨이 유효하다.
+ */
+export function anchorRecallAtK(
+  expected: { doc: string; anchor: string }[],
+  retrieved: { docPath: string; anchors: string[] }[],
+): number {
+  if (expected.length === 0) return Number.NaN;
+  const hit = expected.filter((e) =>
+    retrieved.some((chunk) => chunk.docPath === e.doc && chunk.anchors.includes(e.anchor)),
+  ).length;
+  return hit / expected.length;
+}
+
 /** NaN을 제외한 평균. 유효 표본이 없으면 NaN */
 export function mean(values: number[]): number {
   const valid = values.filter((v) => !Number.isNaN(v));

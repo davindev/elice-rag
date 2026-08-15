@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Citation } from '../rag/pipeline.js';
-import { citationPrecision, mean, recallAtK, reciprocalRank } from './metrics.js';
+import { anchorRecallAtK, citationPrecision, mean, recallAtK, reciprocalRank } from './metrics.js';
 
 function citation(docPath: string): Citation {
   return { index: 1, chunkId: 'x', docPath, headingPath: [], url: '', score: 0 };
@@ -40,6 +40,28 @@ describe('citationPrecision', () => {
   });
   it('인용이 없으면 NaN', () => {
     expect(citationPrecision(['a.md'], [])).toBeNaN();
+  });
+});
+
+describe('anchorRecallAtK', () => {
+  const retrieved = [
+    { docPath: 'a.md', anchors: ['s1', 's2'] },
+    { docPath: 'b.md', anchors: ['s1'] },
+  ];
+  it('문서와 앵커가 모두 일치해야 hit으로 센다', () => {
+    expect(anchorRecallAtK([{ doc: 'a.md', anchor: 's2' }], retrieved)).toBe(1);
+    // b.md에는 s2가 없음 — 같은 앵커명이라도 다른 문서면 miss
+    expect(anchorRecallAtK([{ doc: 'b.md', anchor: 's2' }], retrieved)).toBe(0);
+  });
+  it('복수 라벨은 비율로 계산한다', () => {
+    const expected = [
+      { doc: 'a.md', anchor: 's1' },
+      { doc: 'c.md', anchor: 's9' },
+    ];
+    expect(anchorRecallAtK(expected, retrieved)).toBe(0.5);
+  });
+  it('라벨이 없으면 NaN (집계 제외)', () => {
+    expect(anchorRecallAtK([], retrieved)).toBeNaN();
   });
 });
 

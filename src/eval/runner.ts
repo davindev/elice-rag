@@ -16,7 +16,7 @@ import {
   judgeCorrectness,
   judgeFaithfulness,
 } from './judge.js';
-import { citationPrecision, recallAtK, reciprocalRank } from './metrics.js';
+import { anchorRecallAtK, citationPrecision, recallAtK, reciprocalRank } from './metrics.js';
 import { type QuestionResult, summarize, writeRun } from './report.js';
 
 const GOLDSET_PATH = path.resolve(import.meta.dirname, '../../eval/goldset.jsonl');
@@ -49,6 +49,7 @@ async function evaluateItem(
 
   const metrics: QuestionResult['metrics'] = {
     recall: recallAtK(item.expectedEvidence, retrievedDocs),
+    anchorRecall: anchorRecallAtK(item.expectedAnchors ?? [], contexts),
     reciprocalRank: reciprocalRank(item.expectedEvidence, retrievedDocs),
     citationPrecision: result.answerable
       ? citationPrecision(item.expectedEvidence, result.citations)
@@ -169,7 +170,8 @@ async function main() {
   );
 
   console.log('\n===== Summary (en) =====');
-  console.log(`Recall@k            ${summary.recallAtK.toFixed(3)}`);
+  console.log(`Recall@k (doc)      ${summary.recallAtK.toFixed(3)}`);
+  console.log(`Anchor Recall@k     ${summary.anchorRecallAtK.toFixed(3)}`);
   console.log(`MRR                 ${summary.mrr.toFixed(3)}`);
   console.log(`Citation Precision  ${summary.citationPrecision.toFixed(3)}`);
   console.log(`Abstention Accuracy ${summary.abstentionAccuracy.toFixed(3)}`);

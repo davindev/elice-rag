@@ -64,6 +64,12 @@ describe('chunkDocument', () => {
     expect(chunks[0]?.content).toContain('# not a heading');
   });
 
+  it('병합된 청크는 포함된 모든 섹션의 앵커를 보유한다', () => {
+    const chunks = chunkDocument('doc.md', 'Doc', DOC, { maxTokens: 500 });
+    expect(chunks[0]?.anchors).toEqual(['reference', 'usestate', 'parameters']);
+    expect(chunks[1]?.anchors).toEqual(['usage']);
+  });
+
   it('동일 입력에 대해 결정적 ID를 생성한다', () => {
     const a = chunkDocument('doc.md', 'Doc', DOC);
     const b = chunkDocument('doc.md', 'Doc', DOC);

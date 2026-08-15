@@ -3,7 +3,7 @@ import type { StoredChunk } from '../db.js';
 import { fuseRrf } from './rrf.js';
 
 function chunk(id: string): StoredChunk {
-  return { id, docPath: `${id}.md`, headingPath: [], url: '', content: '', score: 0 };
+  return { id, docPath: `${id}.md`, headingPath: [], anchors: [], url: '', content: '', score: 0 };
 }
 
 describe('fuseRrf', () => {
