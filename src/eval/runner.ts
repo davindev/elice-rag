@@ -104,6 +104,13 @@ async function evaluateItem(
     answer: result.answer,
     retrievedDocs,
     citedDocs: [...new Set(result.citations.map((c) => c.docPath))],
+    citedChunks: result.citations.map((c) => ({
+      index: c.index,
+      chunkId: c.chunkId,
+      docPath: c.docPath,
+      url: c.url,
+      content: contexts[c.index - 1]?.content ?? '',
+    })),
     metrics,
     judgeReasons,
     latencyMs: result.latencyMs,

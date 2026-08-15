@@ -12,6 +12,8 @@ export interface QuestionResult {
   answer: string;
   retrievedDocs: string[];
   citedDocs: string[];
+  /** 답변이 인용한 청크 원문 — human labeling 시 대조 자료 (재검색 없이 결과 파일만으로 검증 가능) */
+  citedChunks: { index: number; chunkId: string; docPath: string; url: string; content: string }[];
   metrics: {
     recall: number;
     reciprocalRank: number;

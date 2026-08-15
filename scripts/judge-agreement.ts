@@ -15,11 +15,15 @@ const humanLabelSchema = z.object({
   humanScore: z.union([z.literal(0), z.literal(0.5), z.literal(1)]),
 });
 
+// N/A metric(NaN)은 JSON 직렬화 과정에서 null이 된다
 const resultsSchema = z.object({
   results: z.array(
     z.object({
       id: z.string(),
-      metrics: z.object({ faithfulness: z.number(), correctness: z.number() }),
+      metrics: z.object({
+        faithfulness: z.number().nullable(),
+        correctness: z.number().nullable(),
+      }),
     }),
   ),
 });
@@ -34,11 +38,7 @@ async function main() {
     .trim()
     .split('\n')
     .map((line) => humanLabelSchema.parse(JSON.parse(line)));
-  // results.json은 NaN을 null로 직렬화하므로 z.number() 파싱 전에 복원한다
-  const raw = JSON.parse(await readFile(resultsPath, 'utf-8'), (_, v) =>
-    v === null ? Number.NaN : v,
-  );
-  const { results } = resultsSchema.parse(raw);
+  const { results } = resultsSchema.parse(JSON.parse(await readFile(resultsPath, 'utf-8')));
   const byId = new Map(results.map((r) => [r.id, r.metrics]));
 
   let exact = 0;
@@ -50,7 +50,7 @@ async function main() {
     const metrics = byId.get(label.id);
     if (metrics === undefined) continue;
     const judgeScore = metrics[label.metric];
-    if (Number.isNaN(judgeScore)) continue;
+    if (judgeScore === null) continue;
     compared += 1;
     const diff = Math.abs(judgeScore - label.humanScore);
     if (diff === 0) exact += 1;
