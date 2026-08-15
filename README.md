@@ -24,7 +24,7 @@ docker compose up -d
 # 4. Ingest (클리닝 → 청킹 → 임베딩 → 인덱싱)
 pnpm ingest
 
-# 5. 서버 실행 — Swagger UI: http://localhost:3000/doc
+# 5. 서버 실행 — 챗 UI: http://localhost:3000 · Swagger UI: /doc
 pnpm dev
 
 # 6. Eval 실행 (Gold Set 25문항 전체 → eval/runs/<timestamp>/ 에 report 생성)
@@ -130,6 +130,20 @@ curl -N -X POST localhost:3000/ask/stream \
 ### 5. API: JSON과 SSE 엔드포인트 분리
 
 `/ask`(JSON)와 `/ask/stream`(SSE)을 분리했습니다. zod-openapi의 typed response는 SSE를 표현할 수 없어, 한 엔드포인트에 합치려면 타입 단언으로 응답 타입 보장을 포기해야 합니다. 응답 형태가 다른 두 모드는 API 설계상으로도 분리가 명확합니다.
+
+### 6. 멀티턴 대화: 무상태 히스토리 + 조건부 쿼리 리라이팅
+
+후속 질문("그거 예시 더 알려줘")은 그 자체로는 검색 가능한 의미가 없어 단일 턴 파이프라인이 실패합니다. 해결 설계:
+
+- **서버 무상태 유지**: 세션 저장소 대신 클라이언트가 `history`를 요청마다 전달 — 이 규모에서 세션 인프라는 오버엔지니어링이고, API가 순수해 테스트·평가가 단순
+- **조건부 리라이팅**: history가 있을 때만 LLM 호출 1회로 후속 질문을 독립형 검색 질의로 재작성 — 단일 턴 질의와 Eval(전부 단일 턴)에는 비용·동작 변화 0
+- **검색 질의는 영어로 재작성**: corpus가 영어라 한국어 후속 질문("사용 예시")은 영어 Usage 섹션과 매칭이 약함 — 리라이팅 시 영어 검색 질의로 변환 (답변 언어는 원 질문을 따르므로 한국어 유지). 실측: "그거 예시 더 알려줘" → 검색 질의 "useEffect usage examples" → Usage 섹션 인용 답변 성공
+- **관측성**: 재작성된 질의를 응답의 `rewrittenQuestion`으로 노출 — 리라이팅 품질을 눈으로 확인 가능
+- **한계**: 멀티턴 품질은 현재 Eval이 커버하지 않음(goldset은 전부 단일 턴) — 멀티턴 gold 문항 추가는 향후 과제
+
+### 7. 데모 챗 UI: 빌드 스텝 없는 단일 정적 파일
+
+과제 필수 범위는 API까지이므로(FAQ: "Part A는 MVP로") Part A~C 완성 후에 추가했습니다. 프레임워크·번들러 없이 vanilla HTML/JS 한 파일(`src/server/public/index.html`)을 서버가 `/`에서 서빙합니다 — SSE 스트리밍 표시, `[n]` 인용 마커의 원문 앵커 링크화, 출처 목록(섹션 breadcrumb), 응답 불가 상태 표시를 지원합니다. React 앱으로 만들지 않은 이유: 평가 축(A/B/C)이 아닌 데모 도구에 빌드 파이프라인을 추가하면 재현 절차만 복잡해집니다.
 
 ## Part B — Eval Harness
 
