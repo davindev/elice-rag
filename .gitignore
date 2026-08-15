@@ -3,3 +3,5 @@ node_modules/
 data/corpus/
 *.log
 .DS_Store
+# human-labels.jsonl 작성용 중간 산출물
+eval/human-labels-sheet.md

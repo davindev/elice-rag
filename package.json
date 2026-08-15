@@ -8,11 +8,11 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "tsx watch src/server/index.ts",
-    "start": "tsx src/server/index.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/server/index.ts",
+    "start": "tsx --env-file-if-exists=.env src/server/index.ts",
     "download-corpus": "tsx scripts/download-corpus.ts",
-    "ingest": "tsx scripts/ingest.ts",
-    "eval": "tsx src/eval/runner.ts",
+    "ingest": "tsx --env-file-if-exists=.env scripts/ingest.ts",
+    "eval": "tsx --env-file-if-exists=.env src/eval/runner.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
