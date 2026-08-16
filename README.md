@@ -332,6 +332,23 @@ rerank는 두 버전을 측정했다 — v1은 후보를 본문만으로 제시�
 - **breadcrumb 보정(v1→v2)은 검색 지표를 개선했다** (Anchor Recall 0.750→0.786, MRR 0.862→0.884). 반면 Correctness는 0.935→0.913으로 내려왔는데, 이 폭(판정 1건)은 judge 분산 범위라 v1의 0.935가 우연히 높았을 가능성과 구분할 수 없다 — Correctness 기준의 arm 간 순위 판단은 이 goldset 규모에서는 유보하는 것이 맞다.
 - **실험 무결성의 교훈**: v1은 파싱 실패 fallback이 몇 번 발생했는지 기록조차 없었다(코드리뷰 지적). v2부터 fallback 횟수·rerank 프롬프트 해시·후보 수·모델이 run 메타데이터에 남는다 — v2의 3/30 fallback은 rerank 효과를 과소평가하는 방향의 오염이며, 이제는 그 크기를 알 수 있다.
 - **비용 관점**: reranker는 질의당 LLM 호출 +1(입력 ~3.5k 토큰), topK=10은 생성 입력 2배. 이 corpus 규모에서는 둘 다 허용 범위이나, 프로덕션 채택 기준은 지연 요구사항에 달려 있다.
+
+#### 후속 측정 — rerank 후보·컨텍스트 예산 확대 (40→10)
+
+"top-10의 recall과 reranker의 정밀도를 결합"하는 Next Steps 가설을 측정했다 (`TOP_K=10 --retriever rerank`, 후보 40개):
+
+| Metric | rerank 20→5 | **rerank 40→10** | dense top10 |
+|---|---|---|---|
+| Anchor Recall@k | 0.750 | 0.821 | 0.893 |
+| MRR | 0.884 | **0.906** (target 0.90 첫 달성) | 0.873 |
+| Citation Precision (v4) | 0.957 | 0.938 | 0.957 |
+| Correctness | 0.935 | **0.935** | 0.913 |
+| Faithfulness | 1.000 | 0.978 | 1.000 |
+| rerank fallback | 3/30 | 1/30 | – |
+
+- 컨텍스트 예산을 10으로 늘리면 rerank가 recall(+0.071)·MRR(target 달성)을 개선하면서 Correctness 최고 수준을 유지한다 — 순수 topK=10(0.913)보다 낫다.
+- 그러나 **후보를 40개로 늘려도 dense top10의 recall(0.893)에는 미달**하며, 손실은 q02·q09 두 문항(reference의 Parameters/Returns 섹션)에 국한된다. 즉 reranker의 손실은 후보 수 문제가 아니라 **선별 판단 문제** — 건조한 reference 섹션의 답변 가치를 과소평가하는 일관된 패턴이다. 다음 개선은 후보 확대가 아니라 rerank 프롬프트가 reference 섹션을 공정하게 평가하도록 하는 것.
+- 부작용 관측: 컨텍스트 10개에서 q12가 문서에 없는 단계를 답에 섞어 Faithfulness가 처음으로 1.0 밑으로(0.978) — 컨텍스트 확대의 노이즈 비용이 여기서도 나타난다.
 - **한계**: 라벨된 15문항 기준의 최적화가 goldset 과적합일 위험을 인지하고 있다. 방향 확정에는 judge 반복 실행과 goldset 확장이 필요하다.
 
 ### 실험 4 — Citation Precision 원인 분해와 라벨 감사 (goldset v4)
@@ -368,8 +385,7 @@ Citation Precision(0.70~0.75)을 target(0.8)까지 올리려면 먼저 감점의
 
 ### Next Steps
 
-- **Reranker 선별 품질 개선**: 정답 섹션이 후보 안에 있는데 못 고르는 케이스가 여전히 병목(0.786 vs 후보 내 존재율 0.893) — 후보 30개 확대, rerank 프롬프트에 선택 근거 서술 요구, 파싱 실패 3/30건의 원인 분석·프롬프트 보강
-- **rerank(10) 하이브리드**: top-10의 recall(0.893)과 reranker의 정밀도를 결합 — 20→10 rerank 구성 측정
+- **Reranker의 reference 섹션 과소평가 보정**: 후속 측정에서 후보 확대(40개)로도 해소되지 않는 일관된 선별 손실(q02·q09 — Parameters/Returns 섹션)이 확인됨 — rerank 프롬프트에 "정의·시그니처를 담은 reference 섹션도 직접 답이 될 수 있음"을 명시하거나 선택 근거 서술을 요구하는 프롬프트 실험이 다음 단계
 - **Query decomposition**: multi-hop 질의를 하위 질의로 분해해 각각 검색 후 병합 — q26~q30의 "두 번째 문서 섹션 누락" 대응
 - **Citation Precision의 섹션 단위 채점**: 인용 채점을 anchor 수준으로 내려 평가 해상도 정합성 완성
 - **Judge 반복 실행**: 동일 run을 judge만 3회 반복해 판정 분산을 실측 — 실험 3의 Correctness 차이가 분산보다 큰지 검정
