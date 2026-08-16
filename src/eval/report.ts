@@ -14,6 +14,8 @@ export interface QuestionResult {
   /** multiturn 문항에서 실제 검색에 쓰인 리라이팅 질의 (관측성) */
   rewrittenQuestion?: string;
   retrievedDocs: string[];
+  /** 검색된 청크의 섹션 위치("docPath > heading path") — 인용 안 된 컨텍스트까지 사후 분석 가능하게 */
+  retrievedSections: string[];
   citedDocs: string[];
   /** 답변이 인용한 청크 원문 — human labeling 시 대조 자료 (재검색 없이 결과 파일만으로 검증 가능) */
   citedChunks: { index: number; chunkId: string; docPath: string; url: string; content: string }[];
@@ -48,11 +50,15 @@ export interface RunConfig {
   judgePromptHash: string;
   goldsetHash: string;
   nodeVersion: string;
-  /** rerank run 전용 메타데이터 — 재현성·실험 무결성 (fallbackCount가 0이어야 순수 rerank arm) */
+  /** rerank run 전용 메타데이터 — 재현성·실험 무결성 (fallback이 비어 있어야 순수 rerank arm) */
   rerankModel?: string;
   rerankCandidateK?: number;
   rerankPromptHash?: string;
   rerankFallbackCount?: number;
+  /** fallback이 발생한 문항 id — 문항 단위 비교 시 오염 여부 판정용 */
+  rerankFallbackIds?: string[];
+  /** hybrid-rerank 전용: hybrid 내부 융합의 실제 DB 검색 깊이 (dense/FTS 각각) */
+  hybridFusionSearchDepth?: number;
 }
 
 export interface Summary {

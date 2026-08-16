@@ -7,7 +7,13 @@ import { createPool } from '../db.js';
 import { createOpenAiCompatibleClient } from '../llm/client.js';
 import { askDetailed, type RagDeps } from '../rag/pipeline.js';
 import { INSUFFICIENT_SENTINEL, QUERY_REWRITE_PROMPT, RAG_SYSTEM_PROMPT } from '../rag/prompts.js';
-import { createRetriever, RETRIEVER_KINDS, type RetrieverKind } from '../retrieval/index.js';
+import { HYBRID_CANDIDATE_MULTIPLIER } from '../retrieval/hybrid.js';
+import {
+  createRetriever,
+  RETRIEVER_KINDS,
+  type RetrieverKind,
+  usesRerank,
+} from '../retrieval/index.js';
 import { RERANK_CANDIDATE_MULTIPLIER, RERANK_SYSTEM_PROMPT } from '../retrieval/rerank.js';
 import { expectsRefusal, type GoldItem, loadGoldset } from './goldset.js';
 import {
@@ -116,6 +122,7 @@ async function evaluateItem(
     answer: result.answer,
     ...(result.rewrittenQuestion !== undefined && { rewrittenQuestion: result.rewrittenQuestion }),
     retrievedDocs,
+    retrievedSections: contexts.map((c) => `${c.docPath} > ${c.headingPath.join(' > ')}`),
     citedDocs: [...new Set(result.citations.map((c) => c.docPath))],
     citedChunks: result.citations.map((c) => ({
       index: c.index,
@@ -137,9 +144,10 @@ async function main() {
   const llm = createOpenAiCompatibleClient(config);
 
   const rerankModel = config.RERANK_MODEL ?? config.LLM_MODEL;
-  // rerank fallback(파싱 실패 → 원 순위 사용)은 rerank arm에 dense 결과를 섞으므로
-  // 반드시 run 메타데이터에 남긴다 — 0이어야 "순수한 rerank run"이라고 주장할 수 있다
-  let rerankFallbackCount = 0;
+  // rerank fallback(파싱 실패 → 원 순위 사용)은 rerank arm에 base 결과를 섞으므로
+  // 어느 문항에서 발생했는지까지 run 메타데이터에 남긴다 — 비어 있어야 "순수한 rerank run"
+  const rerankFallbackIds: string[] = [];
+  let currentItemId = '';
   const ragDeps: RagDeps = {
     retriever: createRetriever(retrieverKind, {
       pool,
@@ -147,8 +155,10 @@ async function main() {
       rerankModel,
       rerankOptions: {
         onFallback: (raw) => {
-          rerankFallbackCount += 1;
-          console.warn(`rerank 파싱 실패 → 원 순위 fallback: ${raw.slice(0, 120)}`);
+          rerankFallbackIds.push(currentItemId);
+          console.warn(
+            `rerank 파싱 실패(${currentItemId}) → 원 순위 fallback: ${raw.slice(0, 120)}`,
+          );
         },
       },
     }),
@@ -163,6 +173,7 @@ async function main() {
 
   const results: QuestionResult[] = [];
   for (const item of goldset) {
+    currentItemId = item.id;
     const result = await evaluateItem(ragDeps, judgeDeps, item, config.TOP_K);
     results.push(result);
     const corr = Number.isNaN(result.metrics.correctness)
@@ -192,11 +203,18 @@ async function main() {
       goldsetHash: sha256(await readFile(GOLDSET_PATH, 'utf-8')),
       nodeVersion: process.version,
       // rerank run의 재현성: rerank 고유 설정을 함께 기록 (다른 retriever면 생략)
-      ...(retrieverKind === 'rerank' && {
+      ...(usesRerank(retrieverKind) && {
         rerankModel,
         rerankCandidateK: config.TOP_K * RERANK_CANDIDATE_MULTIPLIER,
         rerankPromptHash: sha256(RERANK_SYSTEM_PROMPT),
-        rerankFallbackCount,
+        rerankFallbackCount: rerankFallbackIds.length,
+        rerankFallbackIds,
+      }),
+      // hybrid base는 rerank가 요청한 후보 수에 내부 융합 배수를 다시 곱한다 —
+      // 실제 DB 검색 깊이(dense/FTS 각각)를 명시해야 실험 간 비교 조건이 투명해진다
+      ...(retrieverKind === 'hybrid-rerank' && {
+        hybridFusionSearchDepth:
+          config.TOP_K * RERANK_CANDIDATE_MULTIPLIER * HYBRID_CANDIDATE_MULTIPLIER,
       }),
     },
     summary,

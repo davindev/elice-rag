@@ -17,6 +17,7 @@ function result(params: {
     systemAnswerable: true,
     answer: 'a',
     retrievedDocs: [],
+    retrievedSections: [],
     citedDocs: [],
     citedChunks: [],
     metrics: {

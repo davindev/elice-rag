@@ -34,7 +34,7 @@ export const citationSchema = z
     url: z.string().openapi({ example: 'https://react.dev/reference/react/useState#reference' }),
     score: z.number().openapi({
       description:
-        '검색 점수 — 의미는 서버의 RETRIEVER 설정에 따름 (dense: cosine similarity, hybrid: RRF, rerank: dense 원 점수)',
+        '검색 점수 — 의미는 서버의 RETRIEVER 설정에 따름 (dense: cosine similarity, hybrid: RRF 점수, rerank 계열: base 검색기의 원 점수). 구현 간 스케일이 달라 비교 불가',
     }),
   })
   .openapi('Citation');
