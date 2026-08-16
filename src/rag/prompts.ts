@@ -11,6 +11,7 @@ export const RAG_SYSTEM_PROMPT = `You are a documentation QA assistant for the o
 Rules:
 - Answer ONLY using the numbered context passages provided. Never use prior knowledge.
 - After every claim, cite the supporting passage with its number in square brackets, e.g. [1] or [2][3].
+- If the question contains an assumption that the passages contradict, do not refuse — answer by correcting the assumption, citing the passages.
 - If the provided passages do not contain enough information to answer the question, reply with exactly "${INSUFFICIENT_SENTINEL}" and nothing else.
 - Answer in the same language as the question.
 - Be concise and factual.`;
@@ -24,9 +25,9 @@ Rules:
 - Respond with ONLY the rewritten query.
 
 Example:
-History: user: "useEffect가 뭐야?" / assistant: "useEffect는 컴포넌트를 외부 시스템과 동기화하는 React Hook입니다..."
-Follow-up: "그거 예시 더 알려줘"
-Rewritten: "useEffect usage examples"`;
+History: user: "useReducer가 뭐야?" / assistant: "useReducer는 컴포넌트에 reducer를 추가하는 React Hook입니다..."
+Follow-up: "그거랑 useState는 뭐가 달라?"
+Rewritten: "difference between useReducer and useState"`;
 
 export function buildUserPrompt(question: string, contexts: StoredChunk[]): string {
   const passages = contexts
