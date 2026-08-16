@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import type { GoldItem } from './goldset.js';
+import { expectsRefusal, GOLD_TYPES, type GoldItem } from './goldset.js';
 import { mean } from './metrics.js';
 import { evaluateTarget, METRIC_TARGETS } from './targets.js';
 
@@ -11,6 +11,8 @@ export interface QuestionResult {
   question: string;
   systemAnswerable: boolean;
   answer: string;
+  /** multiturn 문항에서 실제 검색에 쓰인 리라이팅 질의 (관측성) */
+  rewrittenQuestion?: string;
   retrievedDocs: string[];
   citedDocs: string[];
   /** 답변이 인용한 청크 원문 — human labeling 시 대조 자료 (재검색 없이 결과 파일만으로 검증 가능) */
@@ -21,7 +23,7 @@ export interface QuestionResult {
     anchorRecall: number;
     reciprocalRank: number;
     citationPrecision: number;
-    /** unanswerable 문항: 거부했으면 1. answerable 문항: 거부 안 했으면 1 */
+    /** 거부가 정답인 유형(unanswerable·injection): 거부했으면 1. 그 외: 거부 안 했으면 1 */
     abstentionCorrect: number;
     faithfulness: number;
     correctness: number;
@@ -41,6 +43,8 @@ export interface RunConfig {
   minScore: number;
   corpusSha: string;
   ragPromptHash: string;
+  /** 멀티턴 리라이팅 프롬프트 해시 — multiturn 문항 결과를 좌우하는 실험 파라미터 */
+  rewritePromptHash?: string;
   judgePromptHash: string;
   goldsetHash: string;
   nodeVersion: string;
@@ -62,19 +66,25 @@ export interface Summary {
   faithfulness: number;
   correctness: number;
   byType: Record<string, { count: number; correctness: number; faithfulness: number }>;
-  koProbe: { count: number; correctness: number; abstentionAccuracy: number };
+  koProbe: {
+    count: number;
+    correctness: number;
+    abstentionAccuracy: number;
+    falseRefusalRate: number;
+  };
 }
 
 export function summarize(results: QuestionResult[]): Summary {
+  const refusalExpected = (r: QuestionResult) => expectsRefusal(r.type);
   const en = results.filter((r) => r.language === 'en');
-  const enAnswerable = en.filter((r) => r.type !== 'unanswerable');
-  const enUnanswerable = en.filter((r) => r.type === 'unanswerable');
+  const enAnswerable = en.filter((r) => !refusalExpected(r));
+  const enRefusalExpected = en.filter(refusalExpected);
   const ko = results.filter((r) => r.language === 'ko');
-  const koAnswerable = ko.filter((r) => r.type !== 'unanswerable');
-  const koUnanswerable = ko.filter((r) => r.type === 'unanswerable');
+  const koAnswerable = ko.filter((r) => !refusalExpected(r));
+  const koRefusalExpected = ko.filter(refusalExpected);
 
   const byType: Summary['byType'] = {};
-  for (const type of ['factoid', 'summary', 'reasoning', 'multihop', 'unanswerable']) {
+  for (const type of GOLD_TYPES) {
     const items = en.filter((r) => r.type === type);
     if (items.length === 0) continue;
     byType[type] = {
@@ -89,7 +99,7 @@ export function summarize(results: QuestionResult[]): Summary {
     anchorRecallAtK: mean(enAnswerable.map((r) => r.metrics.anchorRecall)),
     mrr: mean(enAnswerable.map((r) => r.metrics.reciprocalRank)),
     citationPrecision: mean(enAnswerable.map((r) => r.metrics.citationPrecision)),
-    abstentionAccuracy: mean(enUnanswerable.map((r) => r.metrics.abstentionCorrect)),
+    abstentionAccuracy: mean(enRefusalExpected.map((r) => r.metrics.abstentionCorrect)),
     falseRefusalRate: 1 - mean(enAnswerable.map((r) => r.metrics.abstentionCorrect)),
     faithfulness: mean(enAnswerable.map((r) => r.metrics.faithfulness)),
     correctness: mean(enAnswerable.map((r) => r.metrics.correctness)),
@@ -97,7 +107,9 @@ export function summarize(results: QuestionResult[]): Summary {
     koProbe: {
       count: ko.length,
       correctness: mean(koAnswerable.map((r) => r.metrics.correctness)),
-      abstentionAccuracy: mean(koUnanswerable.map((r) => r.metrics.abstentionCorrect)),
+      abstentionAccuracy: mean(koRefusalExpected.map((r) => r.metrics.abstentionCorrect)),
+      // ko의 false refusal은 en 헤드라인에 안 잡히므로 반드시 여기서 노출 (gate는 en만 유지)
+      falseRefusalRate: 1 - mean(koAnswerable.map((r) => r.metrics.abstentionCorrect)),
     },
   };
 }
@@ -166,7 +178,7 @@ export function renderMarkdown(
     '',
     `### 한국어 probe (분리 집계, n=${summary.koProbe.count})`,
     '',
-    `- correctness: ${fmt(summary.koProbe.correctness)}, abstention: ${fmt(summary.koProbe.abstentionAccuracy)}`,
+    `- correctness: ${fmt(summary.koProbe.correctness)}, abstention: ${fmt(summary.koProbe.abstentionAccuracy)}, false refusal: ${fmt(summary.koProbe.falseRefusalRate)}`,
     '',
     '## 문항별 결과',
     '',

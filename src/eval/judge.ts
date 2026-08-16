@@ -58,11 +58,18 @@ export interface JudgeDeps {
   judgeModel: string;
 }
 
+/** multiturn 문항: 후속 질문만으로는 지시대상("it", "그거")을 알 수 없어 선행 대화를 함께 제공 */
+function conversationBlock(conversation?: string): string {
+  return conversation === undefined
+    ? ''
+    : `Conversation so far (the question below is a follow-up in this conversation):\n${conversation}\n\n`;
+}
+
 export async function judgeFaithfulness(
   deps: JudgeDeps,
-  params: { question: string; answer: string; citedPassages: string },
+  params: { question: string; answer: string; citedPassages: string; conversation?: string },
 ): Promise<JudgeVerdict> {
-  const user = `Question: ${params.question}\n\nCited passages:\n${params.citedPassages}\n\nAnswer:\n${params.answer}`;
+  const user = `${conversationBlock(params.conversation)}Question: ${params.question}\n\nCited passages:\n${params.citedPassages}\n\nAnswer:\n${params.answer}`;
   return runJudge(deps, FAITHFULNESS_JUDGE_PROMPT, user);
 }
 
@@ -73,11 +80,12 @@ export async function judgeCorrectness(
     acceptanceCriteria: string;
     referenceAnswer?: string;
     answer: string;
+    conversation?: string;
   },
 ): Promise<JudgeVerdict> {
   const reference =
     params.referenceAnswer === undefined ? '' : `\n\nReference answer: ${params.referenceAnswer}`;
-  const user = `Question: ${params.question}\n\nAcceptance criteria: ${params.acceptanceCriteria}${reference}\n\nAnswer:\n${params.answer}`;
+  const user = `${conversationBlock(params.conversation)}Question: ${params.question}\n\nAcceptance criteria: ${params.acceptanceCriteria}${reference}\n\nAnswer:\n${params.answer}`;
   return runJudge(deps, CORRECTNESS_JUDGE_PROMPT, user);
 }
 

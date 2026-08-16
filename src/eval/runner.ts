@@ -6,10 +6,10 @@ import { CORPUS_PINNED_SHA } from '../corpus-version.js';
 import { createPool } from '../db.js';
 import { createOpenAiCompatibleClient } from '../llm/client.js';
 import { askDetailed, type RagDeps } from '../rag/pipeline.js';
-import { INSUFFICIENT_SENTINEL, RAG_SYSTEM_PROMPT } from '../rag/prompts.js';
+import { INSUFFICIENT_SENTINEL, QUERY_REWRITE_PROMPT, RAG_SYSTEM_PROMPT } from '../rag/prompts.js';
 import { createRetriever, RETRIEVER_KINDS, type RetrieverKind } from '../retrieval/index.js';
 import { RERANK_CANDIDATE_MULTIPLIER, RERANK_SYSTEM_PROMPT } from '../retrieval/rerank.js';
-import { type GoldItem, loadGoldset } from './goldset.js';
+import { expectsRefusal, type GoldItem, loadGoldset } from './goldset.js';
 import {
   CORRECTNESS_JUDGE_PROMPT,
   FAITHFULNESS_JUDGE_PROMPT,
@@ -46,9 +46,9 @@ async function evaluateItem(
   item: GoldItem,
   topK: number,
 ): Promise<QuestionResult> {
-  const { result, contexts } = await askDetailed(ragDeps, item.question, topK);
+  const { result, contexts } = await askDetailed(ragDeps, item.question, topK, item.history ?? []);
   const retrievedDocs = contexts.map((chunk) => chunk.docPath);
-  const isUnanswerable = item.type === 'unanswerable';
+  const isRefusalExpected = expectsRefusal(item.type);
 
   const metrics: QuestionResult['metrics'] = {
     recall: recallAtK(item.expectedEvidence, retrievedDocs),
@@ -61,13 +61,13 @@ async function evaluateItem(
           result.citations,
         )
       : Number.NaN,
-    abstentionCorrect: isUnanswerable ? (result.answerable ? 0 : 1) : result.answerable ? 1 : 0,
+    abstentionCorrect: isRefusalExpected ? (result.answerable ? 0 : 1) : result.answerable ? 1 : 0,
     faithfulness: Number.NaN,
     correctness: Number.NaN,
   };
   const judgeReasons: QuestionResult['judgeReasons'] = {};
 
-  if (!isUnanswerable) {
+  if (!isRefusalExpected) {
     if (!result.answerable) {
       // 답변 가능한 문항을 거부 → correctness 0 (judge 호출 불필요, 결정적)
       metrics.correctness = 0;
@@ -83,17 +83,21 @@ async function evaluateItem(
               })
               .join('\n\n');
 
+      // multiturn 문항의 judge는 후속 질문만으로는 지시대상을 알 수 없으므로 선행 대화를 함께 전달
+      const conversation = item.history?.map((m) => `${m.role}: ${m.content}`).join('\n');
       const [faithfulness, correctness] = await Promise.all([
         judgeFaithfulness(judgeDeps, {
           question: item.question,
           answer: result.answer,
           citedPassages,
+          ...(conversation !== undefined && { conversation }),
         }),
         judgeCorrectness(judgeDeps, {
           question: item.question,
           acceptanceCriteria: item.acceptanceCriteria,
           answer: result.answer,
           ...(item.referenceAnswer !== undefined && { referenceAnswer: item.referenceAnswer }),
+          ...(conversation !== undefined && { conversation }),
         }),
       ]);
       metrics.faithfulness = faithfulness.score;
@@ -110,6 +114,7 @@ async function evaluateItem(
     question: item.question,
     systemAnswerable: result.answerable,
     answer: result.answer,
+    ...(result.rewrittenQuestion !== undefined && { rewrittenQuestion: result.rewrittenQuestion }),
     retrievedDocs,
     citedDocs: [...new Set(result.citations.map((c) => c.docPath))],
     citedChunks: result.citations.map((c) => ({
@@ -182,6 +187,7 @@ async function main() {
       minScore: config.RETRIEVAL_MIN_SCORE,
       corpusSha: CORPUS_PINNED_SHA,
       ragPromptHash: sha256(RAG_SYSTEM_PROMPT + INSUFFICIENT_SENTINEL),
+      rewritePromptHash: sha256(QUERY_REWRITE_PROMPT),
       judgePromptHash: sha256(FAITHFULNESS_JUDGE_PROMPT + CORRECTNESS_JUDGE_PROMPT),
       goldsetHash: sha256(await readFile(GOLDSET_PATH, 'utf-8')),
       nodeVersion: process.version,

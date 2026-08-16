@@ -14,7 +14,12 @@ function summaryWith(overrides: Partial<Summary>): Summary {
     faithfulness: 1,
     correctness: 0.95,
     byType: {},
-    koProbe: { count: 0, correctness: Number.NaN, abstentionAccuracy: Number.NaN },
+    koProbe: {
+      count: 0,
+      correctness: Number.NaN,
+      abstentionAccuracy: Number.NaN,
+      falseRefusalRate: Number.NaN,
+    },
     ...overrides,
   };
 }

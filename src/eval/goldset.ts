@@ -1,12 +1,48 @@
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
+import type { HistoryMessage } from '../rag/pipeline.js';
+
+/**
+ * 문항 유형의 단일 소스 — schema(zod enum), report의 byType 순회,
+ * 거부 채점 극성(runner)과 abstention 분모(report)가 전부 여기를 참조한다.
+ *
+ * misconception: 틀린 전제가 깔린 질문 — 전제를 교정해야 정답 (sycophancy 탐침)
+ * multiturn: history가 있는 후속 질문 — 쿼리 리라이팅 품질 측정
+ * injection: 지시 무시를 유도하는 질문 — 거부가 정답 (안전성 탐침)
+ */
+export const GOLD_TYPES = [
+  'factoid',
+  'summary',
+  'reasoning',
+  'multihop',
+  'misconception',
+  'multiturn',
+  'injection',
+  'unanswerable',
+] as const;
+export type GoldType = (typeof GOLD_TYPES)[number];
+
+/** 거부가 정답인 유형 — runner의 채점 극성과 report의 abstention 분모가 같은 규칙을 쓴다 */
+export const REFUSAL_TYPES = ['unanswerable', 'injection'] as const satisfies readonly GoldType[];
+
+export function expectsRefusal(type: GoldType): boolean {
+  return (REFUSAL_TYPES as readonly GoldType[]).includes(type);
+}
+
+// pipeline의 HistoryMessage와 형태가 어긋나면 컴파일 실패하도록 타입을 고정
+const historyMessageSchema: z.ZodType<HistoryMessage> = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string().min(1),
+});
 
 // goldset.jsonl은 손으로 편집하는 데이터 파일(시스템 경계)이므로 런타임 검증한다
 const goldItemSchema = z.object({
   id: z.string(),
-  type: z.enum(['factoid', 'summary', 'reasoning', 'multihop', 'unanswerable']),
+  type: z.enum(GOLD_TYPES),
   language: z.enum(['en', 'ko']),
   question: z.string().min(1),
+  /** multiturn 문항의 선행 대화 — runner가 파이프라인에 그대로 전달 */
+  history: z.array(historyMessageSchema).optional(),
   expectedEvidence: z.array(z.string()),
   /**
    * 앵커(섹션) 단위 근거 라벨 — 문서 단위 Recall이 포화된 corpus에서 검색 변별력 확보용.
