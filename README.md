@@ -45,7 +45,7 @@ pnpm eval --retriever hybrid   # Part C 실험 (기본값은 dense)
 | `DATABASE_URL` | 기본값 `postgres://rag:rag@localhost:5432/rag` |
 | `RETRIEVAL_MIN_SCORE` | retrieval 최고 점수 하한 (기본 0 = 비활성, Eval로 튜닝. 점수 의미가 retriever별로 달라 별도 캘리브레이션 필요) |
 | `TOP_K` | 검색 컨텍스트 수 (기본 5) |
-| `RETRIEVER` | `dense`(기본) / `hybrid` / `rerank` — Part C 실험 토글 |
+| `RETRIEVER` | `dense`(기본) / `hybrid` / `rerank` / `hybrid-rerank` — Part C 실험 토글 |
 
 모든 민감 정보는 `.env`로만 관리하며 커밋되지 않습니다.
 
@@ -356,6 +356,25 @@ rerank는 두 버전을 측정했다 — v1은 후보를 본문만으로 제시�
 - 그러나 **후보를 40개로 늘려도 dense top10의 recall(0.893)에는 미달**하며, 손실은 q02·q09 두 문항(reference의 Parameters/Returns 섹션)에 국한된다. 즉 reranker의 손실은 후보 수 문제가 아니라 **선별 판단 문제** — 건조한 reference 섹션의 답변 가치를 과소평가하는 일관된 패턴이다. 다음 개선은 후보 확대가 아니라 rerank 프롬프트가 reference 섹션을 공정하게 평가하도록 하는 것.
 - 부작용 관측: 컨텍스트 10개에서 q12가 문서에 없는 단계를 답에 섞어 Faithfulness가 처음으로 1.0 밑으로(0.978) — 컨텍스트 확대의 노이즈 비용이 여기서도 나타난다.
 - **한계**: 라벨된 15문항 기준의 최적화가 goldset 과적합일 위험을 인지하고 있다. 방향 확정에는 judge 반복 실행과 goldset 확장이 필요하다.
+
+#### 후속 측정 2 — rerank의 base를 hybrid로 교체 (hybrid-rerank, goldset v5)
+
+"실험 2의 hybrid≈dense는 top-5 비교였으니, rerank의 깊은 후보 풀에서는 FTS가 dense가 놓치는 reference 섹션을 끌어올릴 수 있다"는 가설을 검증했다 (run: `08-01-36 rerank` vs `08-03-54 hybrid-rerank`, goldset v5·topK=5). 주의: hybrid base는 rerank가 요청한 후보 20개에 내부 융합 배수(×4)를 다시 곱하므로 **실제 DB 검색 깊이는 dense/FTS 각 80** — 실험 2의 hybrid와는 융합 깊이 조건도 다르다(이후 run부터 `hybridFusionSearchDepth`로 메타데이터에 기록).
+
+| Metric | rerank (dense base) | hybrid-rerank |
+|---|---|---|
+| **Anchor Recall@k** | **0.786** | **0.786** (완전 동일 — 36문항 전부) |
+| Recall@k (doc) | 1.000 | 0.981 (q29 multihop 문서 1개 누락) |
+| MRR | 0.858 | 0.858 |
+| Citation Precision | 0.938 | 0.988 |
+| Faithfulness | 1.000 | 0.963 (**q12가 문서에 없는 단계 포함 — 실제 환각 1건**) |
+| Correctness (en) | 0.926 | 0.944 (±0.5 판정 3건: q04↑ q09↓ q29↑) |
+| ko probe (corr / false refusal) | 1.000 / 0 | 0.667 / **0.333 (q33 거부 회귀)** |
+| rerank fallback | 3/36 | 3/36 (당시 문항 id 미기록 — 이후 run부터 `rerankFallbackIds` 기록) |
+
+**결론: 가설 기각.** 핵심 지표(Anchor Recall)가 완전 동일해 hybrid base가 섹션 recall을 공급하지 못함이 확인됐고, hybrid base는 검색 비용만 키우므로(dense 검색도 20→80행으로 4배) **rerank의 base는 dense 유지**. Correctness 차이는 judge 분산 규모지만, Faithfulness 하락(q12 환각)과 ko probe의 q33 거부 회귀·doc Recall 하락은 분산이 아닌 실측 회귀로 hybrid base의 추가 반대 근거다.
+
+부수 관찰: dense arm에서 일관 거부되던 q33이 이 rerank run(n=1)에서는 답변에 성공했다 — reranker의 컨텍스트 선별이 거부를 해소할 수 있음을 **시사**하지만, 같은 rerank 계열인 hybrid-rerank에서는 재현되지 않았고 통제 반복도 없어 실험 5의 Next Step 가설이 "확인"된 것은 아니다. 검증하려면 rerank arm 통제 반복과, 검색 컨텍스트의 섹션 위치 기록(이후 run부터 `retrievedSections`로 저장)이 필요하다.
 
 ### 실험 4 — Citation Precision 원인 분해와 라벨 감사 (goldset v4)
 

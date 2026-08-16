@@ -39,7 +39,7 @@
 </div>
 <form id="form">
   <div class="row">
-    <input id="q" type="text" placeholder="질문을 입력하세요" autocomplete="off" autofocus />
+    <input id="q" type="text" placeholder="질문을 입력하세요" autocomplete="off" />
     <button id="send" type="submit">질문</button>
   </div>
 </form>
@@ -93,7 +93,7 @@ async function ask(question) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, history: history.slice(-8) }),
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -152,7 +152,7 @@ async function ask(question) {
   } catch (error) {
     cursor.remove();
     bot.classList.add('refused');
-    body.textContent = '오류가 발생했습니다: ' + error.message;
+    body.textContent = `오류가 발생했습니다: ${error.message}`;
   }
   bot.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
