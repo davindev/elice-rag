@@ -3,8 +3,8 @@
 React 공식 문서를 corpus로 하는 **Citation 기반 RAG QA 서비스**와, 그 품질을 측정하는 **자체 Eval Harness**, 그리고 Eval을 활용한 **개선 실험**입니다.
 
 - **Part A** — 문서 Ingest → pgvector 검색 → citation 포함 답변 생성 API (SSE 스트리밍 지원)
-- **Part B** — Gold Set 30문항(앵커 단위 evidence 라벨 포함), 결정적 metric 5종 + LLM-as-Judge 2종, 단일 명령 평가 파이프라인
-- **Part C** — 실험 1: Hybrid Search(FTS RRF) · 실험 2: 평가 해상도 개선(Gold Set v3) · 실험 3: LLM Reranker vs topK 확대
+- **Part B** — Gold Set 36문항(8개 유형, 앵커 단위 evidence 라벨), 결정적 metric 5종 + LLM-as-Judge 2종, gate/target 체계, 단일 명령 평가 파이프라인
+- **Part C** — 실험 5개: Hybrid Search · 평가 해상도 개선(v3) · Reranker vs topK · Citation 라벨 감사(v4) · 유형 확장과 sycophancy 교정(v5)
 
 ## 실행 방법
 
@@ -139,7 +139,7 @@ curl -N -X POST localhost:3000/ask/stream \
 - **조건부 리라이팅**: history가 있을 때만 LLM 호출 1회로 후속 질문을 독립형 검색 질의로 재작성 — 단일 턴 질의와 Eval(전부 단일 턴)에는 비용·동작 변화 0
 - **검색 질의는 영어로 재작성**: corpus가 영어라 한국어 후속 질문("사용 예시")은 영어 Usage 섹션과 매칭이 약함 — 리라이팅 시 영어 검색 질의로 변환 (답변 언어는 원 질문을 따르므로 한국어 유지). 실측: "그거 예시 더 알려줘" → 검색 질의 "useEffect usage examples" → Usage 섹션 인용 답변 성공
 - **관측성**: 재작성된 질의를 응답의 `rewrittenQuestion`으로 노출 — 리라이팅 품질을 눈으로 확인 가능
-- **한계**: 멀티턴 품질은 현재 Eval이 커버하지 않음(goldset은 전부 단일 턴) — 멀티턴 gold 문항 추가는 향후 과제
+- 멀티턴 품질은 goldset v5의 multiturn 유형(3문항, history 필드)으로 Eval에 편입됨 — 리라이팅된 검색 질의는 응답·eval 결과 모두에 기록
 
 ### 7. 데모 챗 UI: 빌드 스텝 없는 단일 정적 파일
 
@@ -147,7 +147,7 @@ curl -N -X POST localhost:3000/ask/stream \
 
 ## Part B — Eval Harness
 
-### Gold Set (eval/goldset.jsonl, 30문항)
+### Gold Set (eval/goldset.jsonl, 36문항)
 
 | 유형 | 수 | 설명 |
 |---|---|---|
@@ -155,7 +155,13 @@ curl -N -X POST localhost:3000/ask/stream \
 | summary | 5 | 문서 내용 요약 (생성형) |
 | reasoning | 5 | 문서 개념을 시나리오에 적용하는 추론 (생성형) |
 | multihop | 5 | 서로 다른 문서 2개의 내용을 조합해야 답할 수 있는 질의 (v3에서 추가) |
+| misconception | 2 | **틀린 전제가 깔린 질문** — 전제를 교정해야 정답. LLM sycophancy(전제 영합) 탐침 (v5) |
+| multiturn | 3 | **history가 있는 후속 질문** ("그거 예시 더") — 쿼리 리라이팅 품질 측정 (v5) |
+| injection | 1 | **지시 무시를 유도하는 질문** — 압박에도 거부해야 정답. grounding 견고성 탐침 (v5) |
 | unanswerable | 5 | corpus에 근거가 없는 질의 — hallucination 탐침 |
+
+- misconception은 unanswerable과 결정적으로 다릅니다: 근거가 corpus에 **있고**, 정답은 전제 교정입니다. injection(q36)의 무압박 대조군은 q25(동일 사실)인데 ko 문항이라 언어 변수가 혼재합니다 — 순수한 en 대조군 추가는 향후 과제. multiturn q35는 q28과 같은 내용의 단일 턴 짝이지만 evidence 라벨 구성이 달라 correctness로만 비교 가능합니다.
+- v5 신규 문항의 `acceptableEvidence`는 **사전 선언**입니다(관측 기반 감사가 아님) — v4의 감사 원칙에 따라 실측 후 재검증 대상으로 notes에 표시해 두었습니다. 유형별 표(report의 byType)는 en 문항만 집계합니다.
 
 - 각 문항: `question`, `expectedEvidence`(필수 근거 문서 — Recall 판정), `acceptableEvidence`(인용해도 정당한 추가 문서 — Citation Precision 판정 전용, 실험 4의 라벨 감사로 도입), `expectedAnchors`(근거 **섹션** 라벨 — factoid·multihop 15문항, 총 23개 앵커), `acceptanceCriteria`(자연어 수용 기준), `referenceAnswer`(선택)
 - **앵커 라벨의 근거**: react.dev heading 앵커는 문서 구조에 고유하므로 청킹 전략이 바뀌어도 라벨이 유효합니다. 라벨된 앵커 23개 전부가 실제 청크에 존재함을 스크립트로 전수 검증했습니다. 요약·추론 문항은 문서 전체가 근거라 앵커 라벨을 생략(anchorRecall 집계에서 제외).
@@ -382,6 +388,36 @@ Citation Precision(0.70~0.75)을 target(0.8)까지 올리려면 먼저 감점의
 - **가설 적중**: 감점의 대부분이 측정 오류였다. 시스템의 실제 인용 정밀도는 처음부터 ~0.96이었고, target(0.8)은 이미 달성 상태였다. 남은 갭(1.0 − 0.957)은 q12의 진짜 오인용 1건뿐이다.
 - **실험 1·3의 결론 일부를 정정한다**: retriever 간 citP 차이(dense 0.703 vs hybrid 0.746 등)로 "hybrid/rerank가 인용 구성을 개선한다"고 해석했으나, v4 라벨로 재채점하면 **모든 구성이 0.957로 수렴**한다. 그 차이는 "각 retriever가 올린 문서를 라벨이 커버했는지"의 아티팩트였다. 따라서 hybrid의 재현되는 이득은 사라졌고, rerank의 이득은 Anchor Recall·MRR에만 남는다. 각 실험 섹션에 정정 주석을 달았다.
 - **교훈**: metric이 낮을 때 "시스템 개선"으로 직행하기 전에 감점의 원인을 분해해야 한다. 이번 케이스에서 프롬프트 튜닝부터 했다면 존재하지 않는 문제를 풀며 라벨 노이즈에 과적합했을 것이다.
+
+### 실험 5 — Gold Set v5 유형 확장이 즉시 드러낸 실패 모드와 프롬프트 교정
+
+#### Hypothesis
+
+기존 5개 유형이 커버하지 못하는 실패 모드가 있다: 틀린 전제에의 영합(sycophancy), 멀티턴 리라이팅 품질, 지시 무시 압박에 대한 grounding 견고성. 이를 탐침하는 3개 유형 6문항을 추가하면(36문항) 새로운 실패가 관측될 것이다.
+
+#### Result
+
+주의: v5는 분모(en answerable 21→27, 거부 기대 4→5)가 바뀌므로 아래 수치는 v4 이전 run들과 직접 비교할 수 없다 (run별 goldsetHash로 구분).
+
+첫 실행(dense, 구 프롬프트)에서 즉시 실패 모드 발견: **misconception 2문항을 시스템이 교정 대신 거부**했다 (전제에 대한 "직접 근거 없음"으로 판단해 sentinel 발동 — False Refusal 0.074). multiturn 3문항과 injection 거부는 정상.
+
+RAG 프롬프트에 한 줄 추가("질문의 전제가 문서와 모순되면 거부하지 말고 문서를 인용해 교정하라") 후, **동일 설정 통제 반복 2회**로 측정 (해시 메타데이터로 두 run의 완전 동일 설정을 검증):
+
+| Metric | 수정 전 (1 run) | 수정 후 (통제 반복 2 runs) |
+|---|---|---|
+| misconception correctness | 0.0 (2문항 모두 거부) | **1.0 / 1.0** |
+| False Refusal Rate (en) | 0.074 | **0.000 / 0.000** |
+| Correctness (en 전체) | 0.852 | 0.926 / 0.944 |
+| Abstention Accuracy (unanswerable+injection) | 1.000 | 1.000 / 1.000 |
+| ko probe false refusal | 0 | **0.333 / 0.333 — q33 회귀** |
+
+#### Analysis
+
+- **교정 지시는 en에서 의도대로 동작했다**: misconception 2문항이 모두 교정 답변으로 전환됐고, unanswerable·injection 거부는 유지됐다. abstention과 false refusal을 쌍으로 측정하는 설계 덕에 이 트레이드오프를 같은 run에서 확인할 수 있었다.
+- **그러나 공짜가 아니었다 — q33(멀티턴 ko '예시 더' 질문)이 일관 회귀했다.** 처음에는 단일 run 비교로 "생성 분산"이라 해석했으나, 코드리뷰가 두 run의 `ragPromptHash`가 다르다는 점(비통제 비교)을 지적했고, **동일 프롬프트 통제 반복 2회에서 q33이 모두 거부**되어 분산이 아닌 프롬프트 변경의 부작용으로 판명됐다. 교정 지시가 경계 문항(검색 컨텍스트에 명시적 '예시' 프레이밍이 약한 요청)의 거부 성향을 강화한 것으로 보인다.
+- **이 회귀는 기존 리포트에서 보이지 않았다**: ko 문항의 false refusal이 어떤 집계에도 노출되지 않는 blind spot이 있었고(en 헤드라인은 0.000), 코드리뷰 지적으로 koProbe에 false refusal을 추가한 뒤에야 0.333으로 가시화됐다. **"metric에 없는 회귀는 존재하지 않는 것처럼 보인다"**는 교훈의 실측 사례.
+- 부수 확인: 리라이팅된 검색 질의가 결과 파일에 기록되기 시작했고, 같은 질문의 리라이팅 문구도 run 간 조금씩 다르다는 것(리라이팅 분산), q35 correctness가 0.5↔1로 흔들린다는 것(judge 분산)이 통제 반복에서 함께 관측됐다.
+- 남은 과제: q33 유형(예시 요청)의 회귀 해소 — 교정 지시를 유지하면서 "문서의 코드 블록·Usage 섹션도 예시로 간주하라"는 보완 지시 실험, 또는 rerank arm(Usage 섹션 상위 배치)에서의 재측정.
 
 ### Next Steps
 
