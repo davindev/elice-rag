@@ -1,15 +1,22 @@
-{"id": "q01", "metric": "correctness", "humanScore": 1.0}
-{"id": "q04", "metric": "correctness", "humanScore": 0.5}
-{"id": "q05", "metric": "correctness", "humanScore": 1.0}
-{"id": "q09", "metric": "correctness", "humanScore": 0.5}
-{"id": "q11", "metric": "correctness", "humanScore": 1.0}
-{"id": "q12", "metric": "correctness", "humanScore": 0.0}
-{"id": "q15", "metric": "correctness", "humanScore": 1.0}
-{"id": "q16", "metric": "correctness", "humanScore": 0.5}
-{"id": "q17", "metric": "correctness", "humanScore": 1.0}
-{"id": "q19", "metric": "correctness", "humanScore": 1.0}
-{"id": "q02", "metric": "faithfulness", "humanScore": 1.0}
-{"id": "q07", "metric": "faithfulness", "humanScore": 1.0}
-{"id": "q13", "metric": "faithfulness", "humanScore": 1.0}
-{"id": "q16", "metric": "faithfulness", "humanScore": 1.0}
-{"id": "q18", "metric": "faithfulness", "humanScore": 1.0}
+{"id": "q01", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q04", "metric": "correctness", "humanScore": 0.5, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q05", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q09", "metric": "correctness", "humanScore": 0.5, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q11", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q12", "metric": "correctness", "humanScore": 0.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q15", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q16", "metric": "correctness", "humanScore": 0.5, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q17", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q19", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q02", "metric": "faithfulness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q07", "metric": "faithfulness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q13", "metric": "faithfulness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q16", "metric": "faithfulness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q18", "metric": "faithfulness", "humanScore": 1.0, "run": "2026-08-15T09-25-37-831Z_dense"}
+{"id": "q26", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T12-31-33-613Z_rerank"}
+{"id": "q27", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T12-31-33-613Z_rerank"}
+{"id": "q28", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T12-31-33-613Z_rerank"}
+{"id": "q29", "metric": "correctness", "humanScore": 0.5, "run": "2026-08-15T12-31-33-613Z_rerank"}
+{"id": "q30", "metric": "correctness", "humanScore": 1.0, "run": "2026-08-15T12-31-33-613Z_rerank"}
+{"id": "q26", "metric": "faithfulness", "humanScore": 1.0, "run": "2026-08-15T12-31-33-613Z_rerank"}
+{"id": "q29", "metric": "faithfulness", "humanScore": 1.0, "run": "2026-08-15T12-31-33-613Z_rerank"}

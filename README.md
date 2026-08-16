@@ -188,7 +188,7 @@ curl -N -X POST localhost:3000/ask/stream \
 - temperature 0 + 명시적 3단계 rubric + few-shot 예시로 판정 분산 최소화
 - Judge 모델을 생성 모델과 다른 모델로 사용 (self-preference bias 완화)
 - Judge 프롬프트를 해시로 run 메타데이터에 기록 — 판정 기준 변경 추적
-- **Human alignment (측정 완료)**: baseline run 답변 15건(correctness 10 + faithfulness 5)을 작성자가 judge 점수 비공개 상태에서 동일 rubric으로 직접 채점(`eval/human-labels.jsonl`) → judge와 **정확 일치 86.7%, ±0.5 이내 93.3%** (`scripts/judge-agreement.ts`). 유일한 1.0 등급 불일치(q17)는 judge 결함이 아니라 human 채점과 judge 실행 사이에 수용 기준이 보정된 버전 차이로, 이를 제외하면 정확 일치 92.9%·±0.5 이내 100%. 한계: 라벨러가 goldset 작성자와 동일인이라 기준 해석이 유리하게 정렬됐을 수 있음(독립 라벨러 검증은 향후 과제)
+- **Human alignment (측정 완료, 22건)**: run 2개의 답변 22건(correctness 15 + faithfulness 7, multi-hop 포함)을 작성자가 judge 점수 비공개 상태에서 동일 rubric으로 직접 채점(`eval/human-labels.jsonl` — 라벨마다 대상 run을 명시해 해당 run과만 비교) → judge와 **정확 일치 86.4%, ±0.5 이내 95.5%** (`scripts/judge-agreement.ts`). 유일한 1.0 등급 불일치(q17)는 judge 결함이 아니라 human 채점과 judge 실행 사이에 수용 기준이 보정된 버전 차이로, 이를 제외하면 정확 일치 90.5%·±0.5 이내 100%. 한계: 라벨러가 goldset 작성자와 동일인이라 기준 해석이 유리하게 정렬됐을 수 있음(독립 라벨러 검증은 향후 과제)
 
 ### Metric 달성 목표 (gate / target)
 
