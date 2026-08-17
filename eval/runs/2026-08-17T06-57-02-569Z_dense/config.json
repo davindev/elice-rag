@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-08-17T06:57:02.569Z",
+  "retriever": "dense",
+  "llmModel": "gpt-4o-mini",
+  "embeddingModel": "text-embedding-3-small",
+  "judgeModel": "gpt-4o",
+  "temperature": 0,
+  "topK": 5,
+  "minScore": 0,
+  "corpusSha": "383a1e9239c8c084a16a19daa4fc2a7ad04e2a3a",
+  "embeddingInput": "content",
+  "ragPromptHash": "71fde37c2deabf8558b53a1c951021f4b1bbae07330803789b72e556662cdcc9",
+  "rewritePromptHash": "2fec14908b8288f2d5dd3848d5508b510454c61dbbe3ad19e9eaa6db816633d5",
+  "judgePromptHash": "9a519b0fae498971e6816bd4ca67464fc4c9b69d3bcd7eceab346ccbfb4cbb5b",
+  "goldsetHash": "9c3c929edf2bdcfdbbd42be936d4b3f154a5d96dcd5f2212285639d8c77d6136",
+  "nodeVersion": "v22.11.0"
+}
