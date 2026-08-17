@@ -227,7 +227,7 @@ run report(`report.md`)의 Summary 표에 metric별 gate/target 대비 상태(�
 
 run마다 `eval/runs/<timestamp>_<retriever>/`에 기록:
 
-- `config.json` — 모델 3종, temperature, topK, minScore, corpus SHA, RAG/Judge 프롬프트 해시, goldset 해시, Node 버전
+- `config.json` — 모델 3종, temperature, topK, minScore, corpus SHA, 임베딩 입력 체계, **인덱스 지문**(DB의 청크 ID 집합 해시 — 코드 상수가 아닌 실제 DB 상태에서 파생되므로 "재인덱싱을 잊은 run"이 비교 가능한 것처럼 보이는 것을 방지), RAG/리라이팅/Judge 프롬프트 해시, goldset 해시, --strict 여부, Node 버전
 - `results.json` — 문항별 원시 결과 (답변 전문, 검색·인용 문서, judge 판정 이유 포함)
 - `report.md` — metric 요약표 + 문항별 breakdown
 
@@ -438,9 +438,39 @@ RAG 프롬프트에 한 줄 추가("질문의 전제가 문서와 모순되면 �
 - 부수 확인: 리라이팅된 검색 질의가 결과 파일에 기록되기 시작했고, 같은 질문의 리라이팅 문구도 run 간 조금씩 다르다는 것(리라이팅 분산), q35 correctness가 0.5↔1로 흔들린다는 것(judge 분산)이 통제 반복에서 함께 관측됐다.
 - 남은 과제: q33 유형(예시 요청)의 회귀 해소 — 교정 지시를 유지하면서 "문서의 코드 블록·Usage 섹션도 예시로 간주하라"는 보완 지시 실험, 또는 rerank arm(Usage 섹션 상위 배치)에서의 재측정.
 
+### 실험 6 — 임베딩 입력에 breadcrumb 접두 (기각·롤백, gate의 첫 실전 작동)
+
+#### Hypothesis
+
+500토큰 초과 섹션이 분할되면 heading 텍스트가 첫 조각에만 남아, 뒷조각의 임베딩에는 "어느 API의 어느 섹션인지" 단서가 사라진다. **임베딩 입력에만** breadcrumb을 접두(`"useEffect > Usage\n\n본문"`)하면 — 저장 본문·프롬프트는 그대로 — 분할 조각의 섹션 검색이 개선되어 Anchor Recall이 오를 것이다. (코드 학습 세션에서 "잘린 청크는 h2 정보를 잃지 않나?"라는 질문에서 출발한 실험)
+
+#### 설계
+
+- 임베딩 입력을 저장 본문과 분리하고 청크 해시가 임베딩 입력 변경을 커버하도록 변경 — 증분 ingest가 체계 변경을 스킵하지 않도록 (멱등성 전제 유지)
+- 임베딩 체계(`embeddingInput`)를 run 메타데이터에 기록 — 체계가 다른 run 간 검색 지표 비교 방지
+- run: before = `08-16 06-50/06-52`(교차 검증용), after = `08-17 06-51/06-53`, 롤백 확인 = `08-17 06-57`. 검색 지표는 동일 인덱스에서 결정적이므로 반복이 주는 추가 정보는 judge 계열뿐이며, **정합성의 실질 근거는 동일 커밋에서 돌린 롤백 확인 run이 baseline과 문항 단위까지 일치**한다는 것
+
+#### Result
+
+| Metric | content만 (before ×2) | breadcrumb+content (×2) | 롤백 확인 run |
+|---|---|---|---|
+| Anchor Recall@k | 0.643 / 0.643 | **0.607 / 0.607 (하락)** | 0.643 |
+| Recall@k (doc) | 0.963 / 0.963 | **0.926 / 0.926 — ❌ gate(≥0.95) 미달** | 0.963 |
+| MRR | 0.849 / 0.849 | 0.892 / 0.892 (상승) | 0.849 |
+| Correctness | 0.926 / 0.944 | 0.907 / 0.944 | 0.944 |
+
+#### Analysis
+
+- **가설 기각 + 결정적 회귀.** 효과 크기를 정직하게 적으면: doc Recall 하락(0.963→0.926)은 **q31 1문항**이 전부이고, Anchor Recall 하락(0.643→0.607)은 q03(−1.0)과 q28(+0.5 — **가설 방향의 개선도 1건 있었다**)의 순변화다. RR은 4문항 개선/2문항 악화로 혼재(MRR 0.849→0.892). 답변 품질(correctness·faithfulness·citP)은 유지됐다. 그럼에도 롤백한 이유: 검색 지표의 순손실이 결정적으로 재현되고, 이득(MRR)은 이미 gate 안이며 손실(recall)은 gate 밖이기 때문.
+- **gate가 실험 4의 상향 이후 처음으로 미달 경보를 냈다** (`Recall@k 0.926 < 0.95`). baseline이 이미 26/27(0.963)이라 추가 실패 1건이면 미달하는 해상도였다는 점도 함께 기록한다 — gate는 차단 장치이자, baseline이 상한에 가까울수록 민감해지는 경보다.
+- **맹점의 실체**: breadcrumb은 **문서 내 모든 청크에 동일한 접두어**다. 같은 문서의 청크들이 공유 토큰으로 서로 유사해져 top-K가 한 문서로 쏠린다(q30: 5/5가 같은 문서 — 단 metric 변화는 없어 예시 관찰). q31에서는 expectedEvidence(`state-a-components-memory.md`)가 질문의 "useState" 단어와 breadcrumb이 매칭된 `useState.md` 청크 5개에 밀려 top-5 밖으로 나갔다 — 주의: `useState.md`는 우리 라벨상 **acceptable-but-not-expected** 문서라(답변 correctness·citP는 1.0 유지) "오답 문서 상승"이 아니라 **필수 근거 문서의 이탈**이 정확한 서술이다. q03은 두 앵커를 모두 가진 정답 청크가 같은 문서의 다른 섹션들에 밀렸다(anchorRecall 1→0).
+- **교훈**: "청크에 문맥을 준다"는 방향보다 **무엇을 주느냐**가 핵심 — 공유 접두어는 변별력을 죽인다. 청크마다 **고유한** 문맥(조각 요약, contextual retrieval 방식)이어야 한다는 다음 가설이 도출됐다.
+- 조치: 롤백 후 확인 run으로 baseline 일치 검증. 실험 산물로 유지한 것: 임베딩 체계 메타데이터, **인덱스 지문 기록**(DB의 청크 ID 집합 해시 — "코드는 바꿨는데 재인덱싱을 잊은" run이 비교 가능해 보이는 것을 실제 DB 상태로 방지), 청크 해시의 커버리지를 저장 페이로드 전체로 확장(앵커·breadcrumb만 바뀌어도 갱신 누락 없음).
+
 ### Next Steps
 
 - **Reranker의 reference 섹션 과소평가 보정**: 후속 측정에서 후보 확대(40개)로도 해소되지 않는 일관된 선별 손실(q02·q09 — Parameters/Returns 섹션)이 확인됨 — rerank 프롬프트에 "정의·시그니처를 담은 reference 섹션도 직접 답이 될 수 있음"을 명시하거나 선택 근거 서술을 요구하는 프롬프트 실험이 다음 단계
+- **청크별 고유 문맥 임베딩 (contextual retrieval)**: 실험 6에서 공유 접두어(breadcrumb)는 섹션 변별력을 훼손함이 확인됨 — 청크마다 고유한 문맥 요약을 LLM으로 생성해 접두하는 방식이면 부작용 없이 분할 조각 문제를 풀 수 있다는 후속 가설 (임베딩 비용 + 청크당 LLM 호출 1회의 ingest 비용 트레이드오프)
 - **Query decomposition**: multi-hop 질의를 하위 질의로 분해해 각각 검색 후 병합 — q26~q30의 "두 번째 문서 섹션 누락" 대응
 - **Citation Precision의 섹션 단위 채점**: 인용 채점을 anchor 수준으로 내려 평가 해상도 정합성 완성
 - **Judge 반복 실행**: 동일 run을 judge만 3회 반복해 판정 분산을 실측 — 실험 3의 Correctness 차이가 분산보다 큰지 검정
