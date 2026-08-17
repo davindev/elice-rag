@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- 임베딩 차원은 모델 확정 시점에 결정되므로 vector 컬럼을 무차원으로 선언한다.
 -- 차원 일관성은 ingest 파이프라인이 보장한다 (동일 모델·동일 차원만 upsert).
 CREATE TABLE IF NOT EXISTS chunks (
-  id TEXT PRIMARY KEY, -- 청크 내용 해시 (멱등 재인덱싱)
+  id TEXT PRIMARY KEY, -- 저장 페이로드(경로+breadcrumb+앵커+본문) 해시 (멱등 재인덱싱)
   doc_path TEXT NOT NULL,
   heading_path TEXT[] NOT NULL,
   anchors TEXT[] NOT NULL DEFAULT '{}', -- 청크에 포함된 섹션 앵커 (앵커 단위 evidence 매칭용)

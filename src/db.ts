@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import pg from 'pg';
 import type { Chunk } from './ingest/chunker.js';
 
@@ -63,6 +64,24 @@ export async function upsertChunks(
 export async function deleteStaleChunks(pool: pg.Pool, liveIds: string[]): Promise<number> {
   const result = await pool.query('DELETE FROM chunks WHERE NOT (id = ANY($1::text[]))', [liveIds]);
   return result.rowCount ?? 0;
+}
+
+/**
+ * 인덱스 지문 — 청크 ID가 저장 페이로드의 해시이므로, ID 집합의 해시는
+ * "임베딩 입력 체계·코퍼스·청킹 설정"이 하나라도 다르면 달라진다.
+ * eval이 코드 상수가 아닌 **실제 DB 상태**에서 파생된 이 값을 기록해야,
+ * "코드는 바꿨는데 재인덱싱을 잊은" run이 비교 가능한 것처럼 보이는 일을 막는다.
+ */
+export async function indexFingerprint(
+  pool: pg.Pool,
+): Promise<{ chunkCount: number; idsSha: string }> {
+  const result = await pool.query<{ id: string }>('SELECT id FROM chunks ORDER BY id');
+  return {
+    chunkCount: result.rows.length,
+    idsSha: createHash('sha256')
+      .update(result.rows.map((row) => row.id).join('\n'))
+      .digest('hex'),
+  };
 }
 
 export async function existingChunkIds(pool: pg.Pool): Promise<Set<string>> {

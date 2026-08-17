@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { CORPUS_PINNED_SHA } from '../corpus-version.js';
-import { createPool } from '../db.js';
+import { createPool, indexFingerprint } from '../db.js';
+import { EMBED_INPUT_SCHEME } from '../ingest/chunker.js';
 import { createOpenAiCompatibleClient } from '../llm/client.js';
 import { askDetailed, type RagDeps } from '../rag/pipeline.js';
 import { INSUFFICIENT_SENTINEL, QUERY_REWRITE_PROMPT, RAG_SYSTEM_PROMPT } from '../rag/prompts.js';
@@ -185,6 +186,7 @@ async function main() {
   }
 
   const summary = summarize(results);
+  const fingerprint = await indexFingerprint(pool);
   const runDir = await writeRun(
     RUNS_DIR,
     {
@@ -197,6 +199,10 @@ async function main() {
       topK: config.TOP_K,
       minScore: config.RETRIEVAL_MIN_SCORE,
       corpusSha: CORPUS_PINNED_SHA,
+      embeddingInput: EMBED_INPUT_SCHEME,
+      indexChunkCount: fingerprint.chunkCount,
+      indexIdsSha: fingerprint.idsSha,
+      strictMode: process.argv.includes('--strict'),
       ragPromptHash: sha256(RAG_SYSTEM_PROMPT + INSUFFICIENT_SENTINEL),
       rewritePromptHash: sha256(QUERY_REWRITE_PROMPT),
       judgePromptHash: sha256(FAITHFULNESS_JUDGE_PROMPT + CORRECTNESS_JUDGE_PROMPT),

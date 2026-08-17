@@ -44,6 +44,13 @@ export interface RunConfig {
   topK: number;
   minScore: number;
   corpusSha: string;
+  /** 임베딩 입력 방식 — 부재는 실험 6 이전 run(당시 체계는 content). 체계가 다른 run끼리는 검색 지표 비교 불가 */
+  embeddingInput?: 'content' | 'breadcrumb+content';
+  /** 실제 DB 인덱스에서 파생한 지문 — 코퍼스·청킹·임베딩 체계가 하나라도 다르면 달라짐 */
+  indexChunkCount?: number;
+  indexIdsSha?: string;
+  /** --strict 실행 여부 — "gate가 차단했다"는 주장의 검증 근거 */
+  strictMode?: boolean;
   ragPromptHash: string;
   /** 멀티턴 리라이팅 프롬프트 해시 — multiturn 문항 결과를 좌우하는 실험 파라미터 */
   rewritePromptHash?: string;
@@ -144,7 +151,19 @@ export function renderMarkdown(
     `| topK | ${config.topK} |`,
     `| minScore | ${config.minScore} |`,
     `| corpusSha | ${config.corpusSha.slice(0, 12)} |`,
+    ...(config.embeddingInput === undefined
+      ? []
+      : [`| embeddingInput | ${config.embeddingInput} |`]),
+    ...(config.indexIdsSha === undefined
+      ? []
+      : [
+          `| indexFingerprint | ${config.indexChunkCount}청크 / ${config.indexIdsSha.slice(0, 12)} |`,
+        ]),
+    ...(config.strictMode === undefined ? [] : [`| strictMode | ${config.strictMode} |`]),
     `| ragPromptHash | ${config.ragPromptHash.slice(0, 12)} |`,
+    ...(config.rewritePromptHash === undefined
+      ? []
+      : [`| rewritePromptHash | ${config.rewritePromptHash.slice(0, 12)} |`]),
     `| judgePromptHash | ${config.judgePromptHash.slice(0, 12)} |`,
     `| goldsetHash | ${config.goldsetHash.slice(0, 12)} |`,
     ...(config.rerankModel === undefined

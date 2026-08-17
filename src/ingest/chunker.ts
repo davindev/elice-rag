@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { countTokens } from './tokens.js';
 
 export interface Chunk {
-  /** 내용 해시 기반 결정적 ID — 재인덱싱 시 멱등성 보장 */
+  /** 저장 페이로드 전체의 해시로 만든 결정적 ID — 재인덱싱 시 멱등성 보장 */
   id: string;
   docPath: string;
   /** [문서 제목, h2, h3, ...] 형태의 breadcrumb */
@@ -14,6 +14,9 @@ export interface Chunk {
   content: string;
   tokenCount: number;
 }
+
+/** 임베딩 입력 방식 식별자 — run 메타데이터에 기록해 임베딩 체계 변경을 추적. 현재는 content 그 자체 */
+export const EMBED_INPUT_SCHEME = 'content' as const;
 
 interface Section {
   level: number;
@@ -203,6 +206,12 @@ function makeChunk(
   anchors: string[],
   content: string,
 ): Chunk {
-  const id = createHash('sha256').update(`${docPath}\n${content}`).digest('hex').slice(0, 24);
+  // 해시는 저장 페이로드 전체 기준 — 임베딩 입력(content)만이 아니라 앵커·breadcrumb 같은
+  // 메타데이터만 바뀐 경우에도 새 ID가 되어, 증분 ingest가 갱신을 스킵해 옛 메타데이터가
+  // DB에 잔류하는 일이 없도록 한다 (멱등성의 전제)
+  const id = createHash('sha256')
+    .update(`${docPath}\n${headingPath.join('>')}\n${anchors.join(',')}\n${content}`)
+    .digest('hex')
+    .slice(0, 24);
   return { id, docPath, headingPath, anchor, anchors, content, tokenCount: countTokens(content) };
 }

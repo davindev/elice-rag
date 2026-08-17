@@ -70,6 +70,13 @@ describe('chunkDocument', () => {
     expect(chunks[1]?.anchors).toEqual(['usage']);
   });
 
+  it('본문이 같아도 앵커가 바뀌면 ID가 달라진다 (메타데이터 갱신 누락 방지)', () => {
+    const a = chunkDocument('doc.md', 'Doc', '## Same {/*old-anchor*/}\n\nBody text.');
+    const b = chunkDocument('doc.md', 'Doc', '## Same {/*new-anchor*/}\n\nBody text.');
+    expect(a[0]?.content).toBe(b[0]?.content); // 앵커는 본문에서 제거되므로 content는 동일
+    expect(a[0]?.id).not.toBe(b[0]?.id); // 그래도 ID는 달라야 upsert가 스킵되지 않음
+  });
+
   it('동일 입력에 대해 결정적 ID를 생성한다', () => {
     const a = chunkDocument('doc.md', 'Doc', DOC);
     const b = chunkDocument('doc.md', 'Doc', DOC);
