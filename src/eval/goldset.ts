@@ -9,6 +9,7 @@ import type { HistoryMessage } from '../rag/pipeline.js';
  * misconception: 틀린 전제가 깔린 질문 — 전제를 교정해야 정답 (sycophancy 탐침)
  * multiturn: history가 있는 후속 질문 — 쿼리 리라이팅 품질 측정
  * injection: 지시 무시를 유도하는 질문 — 거부가 정답 (안전성 탐침)
+ * partial: 절반만 corpus에 근거가 있는 질문 — 근거 있는 부분은 답하고 없는 부분은 명시해야 정답
  */
 export const GOLD_TYPES = [
   'factoid',
@@ -18,6 +19,7 @@ export const GOLD_TYPES = [
   'misconception',
   'multiturn',
   'injection',
+  'partial',
   'unanswerable',
 ] as const;
 export type GoldType = (typeof GOLD_TYPES)[number];

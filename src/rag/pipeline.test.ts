@@ -82,6 +82,23 @@ describe('askDetailed — 멀티턴 리라이팅', () => {
     expect(genMessages?.[2]).toEqual(history[1]);
   });
 
+  it('sentinel로 시작하면 거부, 정답 뒤에 온 sentinel은 부분 답변으로 유지한다', async () => {
+    const refusal = fakeDeps({
+      answer: '  INSUFFICIENT_CONTEXT',
+      retrievedQueries: [],
+      chatCalls: [],
+    });
+    expect((await askDetailed(refusal, 'q', 2)).result.answerable).toBe(false);
+
+    // 근거 있는 부분을 답하고 끝에 sentinel을 붙인 부분 답변은 거부로 파기하지 않는다 (실험 7)
+    const partial = fakeDeps({
+      answer: 'useState returns two values [1]. React 19 changes: INSUFFICIENT_CONTEXT',
+      retrievedQueries: [],
+      chatCalls: [],
+    });
+    expect((await askDetailed(partial, 'q', 2)).result.answerable).toBe(true);
+  });
+
   it('리라이팅이 빈 출력이면 원 질문으로 폴백한다', async () => {
     const retrievedQueries: string[] = [];
     const deps = fakeDeps({

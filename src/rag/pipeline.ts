@@ -200,6 +200,8 @@ function finalize(
 ): AskResult {
   const latencyMs = Math.round(performance.now() - startedAt);
 
+  // 거부 판정은 "sentinel로 시작"만 — 본문 어디든(includes) 잡으면 부분 답변("...답변... 나머지는
+  // 근거 없음")의 정답 형태까지 거부로 파기한다(실험 7에서 실측). 순수 거부는 sentinel만 출력하므로 startsWith로 충분
   if (rawAnswer.trim().startsWith(INSUFFICIENT_SENTINEL)) {
     return {
       answerable: false,
