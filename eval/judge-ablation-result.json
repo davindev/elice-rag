@@ -1,0 +1,15 @@
+{
+  "run": "2026-08-18T02-21-10-431Z_dense",
+  "note": "동일 답변을 두 judge로 재채점 (변인=judge 모델). en answerable 27문항.",
+  "judges": {
+    "gemini-3.1-pro-preview": { "correctness": 0.907, "faithfulness": 0.981 },
+    "claude-sonnet-5": { "correctness": 0.907, "faithfulness": 1.000, "note": "temperature 미지원(reasoning) — 생략" }
+  },
+  "disagreements": [
+    { "id": "q28", "metric": "correctness", "gemini": 1.0, "sonnet": 0.5 },
+    { "id": "q32", "metric": "correctness", "gemini": 0.5, "sonnet": 1.0 },
+    { "id": "q19", "metric": "faithfulness", "gemini": 0.5, "sonnet": 1.0 }
+  ],
+  "agreementRate": 0.889,
+  "conclusion": "집계는 동일(0.907)하나 문항 3/27이 반대 방향으로 상쇄됨 — 총점 동일 != judge 대체 가능"
+}
