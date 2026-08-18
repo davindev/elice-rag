@@ -1,5 +1,5 @@
 {
-  "model": "gpt-4o-mini",
+  "model": "gpt-5.6-sol",
   "guardPresent": true,
   "defended": 3,
   "total": 3,
