@@ -526,6 +526,30 @@ Claude.ai 공개 시스템 프롬프트와 Anthropic Citations 문서를 대조�
 
 **채택은 injection 가드 한 줄뿐**이고, 그 실효조차 이 모델에선 미측정이다. 그럼에도 이 실험의 값은 세 가지다: (1) 상용 프롬프트와 실제 대조해 우리 프롬프트가 이미 견고함을 확인, (2) "측정 없이 프롬프트를 늘리지 않는다"를 네 번 실천(partial·conflict·sentinel·다양화 전부 기각), (3) 내가 실험 중 내린 두 판단 — "abstention 붕괴는 partial 탓", "sentinel 혼합 방어는 무해" — 이 **둘 다 코드리뷰로 반증**됐다는 것. 후자는 특히 정답을 파괴하는 회귀였다. partial 2문항은 goldset에 남겨(q37은 통과, q38은 검색 실패로 미해결) 향후 파이프라인 수준 해법의 평가 기준으로 삼는다.
 
+### 실험 8 — Judge ablation: 같은 답변을 두 Judge로 채점
+
+#### 동기
+
+엘리스 전환에서 Correctness가 0.914(gpt-4o judge)→0.845(Gemini judge)로 내려온 것이 "Gemini judge가 더 엄격해서"라고 진단했다. 이를 검증하려면 **같은 답변을 서로 다른 Judge로 채점**해 변인을 Judge 하나로 격리해야 한다.
+
+#### 설계
+
+`scripts/judge-ablation.ts` — 저장된 dense run(`02-21-10`)의 **답변을 재생성하지 않고** 그대로 두 Judge로 재채점: Gemini 3.1 Pro(원 run과 동일, 대조군) vs Claude Sonnet 5. 답변이 고정이므로 점수 차이는 순수하게 Judge 모델에서만 온다. (부수 발견: Claude Sonnet 5도 reasoning 모델이라 temperature를 거부 — Judge의 temperature 0 결정성 확보가 모델에 따라 불가능함을 확인)
+
+#### Result & Analysis
+
+en answerable 27문항, 동일 답변:
+
+| Judge | Correctness | Faithfulness |
+|---|---|---|
+| Gemini 3.1 Pro | 0.907 | 0.981 |
+| Claude Sonnet 5 | 0.907 | 1.000 |
+
+- **집계는 사실상 동일**하다 — "Judge를 바꿔도 총점은 안 변한다"처럼 보인다.
+- **그러나 문항 단위로는 27건 중 3건(11%)이 갈렸다** (같은 답변인데): q28 correctness Gemini 1.0 vs Sonnet 0.5, q32 correctness Gemini 0.5 vs Sonnet 1.0, q19 faithfulness Gemini 0.5 vs Sonnet 1.0. **집계가 같은 건 두 Judge의 불일치가 서로 반대 방향으로 상쇄됐기 때문**이지 두 Judge가 같은 판단을 해서가 아니다 — q28은 Gemini가, q32는 Sonnet이 후하게 매겨 우연히 상쇄됐다.
+- **핵심 교훈**: 총점이 같다고 Judge가 대체 가능한 것이 아니다. Judge 간 일치율(약 89%)이 human alignment(86.4%)와 비슷한 수준이라는 것은, **단일 Judge를 쓰면 그 11%의 문항이 그 Judge의 해석에 좌우된다**는 뜻이다. 이는 모듈 7의 "LLM Judge는 rubric 해석에 의존한다"는 한계를 정량화한 것이며, 판정을 강하게 주장하려면 복수 Judge 합의(또는 human 라벨과의 대조)가 필요함을 실측으로 뒷받침한다.
+- **엘리스 전환 진단의 보정**: "Gemini가 gpt-4o보다 엄격해 0.845로 하락"이라는 앞선 서술은 en 전체(partial 포함) 기준이었고, 이 ablation의 27문항(answerable) 기준으로는 Gemini·Sonnet 모두 0.907로 같다. 즉 correctness 하락의 상당 부분은 partial 유형(q37/q38, 거부로 corr 0)과 생성 모델(gpt-4o-mini→gpt-5.6-sol) 변화에서 왔고, judge 모델 자체의 엄격도 차이는 **집계 수준에서는 작고 문항 단위에서만 드러난다**는 것으로 정정한다.
+
 ### Next Steps
 
 - **Reranker의 reference 섹션 과소평가 보정**: 후속 측정에서 후보 확대(40개)로도 해소되지 않는 일관된 선별 손실(q02·q09 — Parameters/Returns 섹션)이 확인됨 — rerank 프롬프트에 "정의·시그니처를 담은 reference 섹션도 직접 답이 될 수 있음"을 명시하거나 선택 근거 서술을 요구하는 프롬프트 실험이 다음 단계
