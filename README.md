@@ -4,7 +4,7 @@ React 공식 문서를 corpus로 하는 **Citation 기반 RAG QA 서비스**와,
 
 - **Part A** — 문서 Ingest → pgvector 검색 → citation 포함 답변 생성 API (SSE 스트리밍 지원)
 - **Part B** — Gold Set 38문항(9개 유형, 앵커 단위 evidence 라벨), 결정적 metric 5종 + LLM-as-Judge 2종, gate/target 체계, 단일 명령 평가 파이프라인
-- **Part C** — 개선 실험 9개: Hybrid Search · 평가 해상도 개선 · Reranker vs topK · Citation 라벨 감사 · 유형 확장과 sycophancy 교정 · breadcrumb 임베딩(기각) · 상용 프롬프트 대조 · Judge ablation · 생성 모델 ablation
+- **Part C** — 개선 실험 10개: Hybrid Search · 평가 해상도 개선 · Reranker vs topK · Citation 라벨 감사 · 유형 확장과 sycophancy 교정 · breadcrumb 임베딩(기각) · 상용 프롬프트 대조 · Judge ablation · 생성 모델 ablation · 평가·검색 신뢰성 추가 검증
 
 ## 실행 방법
 
@@ -259,6 +259,7 @@ curl -N -X POST localhost:3000/ask/stream \
 - Judge 모델을 생성 모델과 다른 계열로 사용 (self-preference bias 완화)
 - Judge 프롬프트를 해시로 run 메타데이터에 기록 — 판정 기준 변경 추적
 - **Human alignment (측정 완료, 22건)**: run 2개의 답변 22건(correctness 15 + faithfulness 7, multi-hop 포함)을 작성자가 judge 점수 비공개 상태에서 동일 rubric으로 직접 채점(`eval/human-labels.jsonl` — 라벨마다 대상 run을 명시해 해당 run과만 비교) → judge와 **정확 일치 86.4%, ±0.5 이내 95.5%** (`scripts/judge-agreement.ts`). 유일한 1.0 등급 불일치(q17)는 judge 결함이 아니라 human 채점과 judge 실행 사이에 수용 기준이 보정된 버전 차이로, 이를 제외하면 정확 일치 90.5%·±0.5 이내 100%. 한계: 라벨러가 goldset 작성자와 동일인이라 기준 해석이 유리하게 정렬됐을 수 있음(독립 라벨러 검증은 향후 과제)
+- **Judge 반복 결정성**: 같은 답변을 같은 Judge(Gemini)로 3회 재채점 → correctness·faithfulness 모두 0/27 문항 분산(실험 10-①). temperature 0에서 판정이 재현적이라, Judge 점수의 흔들림은 반복이 아니라 생성 재실행·Judge 모델 교체에서만 옵니다.
 - **Judge 간 교차 검증**: 실험 8에서 같은 답변을 Gemini와 Claude Sonnet 5로 재채점 → Judge 간 일치율 약 89%(human alignment와 유사 수준). 집계 총점이 같아도 문항 단위 판정은 Judge에 따라 달라짐을 실측(아래 실험 8).
 
 ### Metric 달성 목표 (gate / target)
@@ -289,7 +290,7 @@ run report(`report.md`)의 Summary 표에 metric별 gate/target 대비 상태(�
 - Citation Precision은 여전히 **문서 단위** 매칭 — 같은 문서의 엉뚱한 섹션을 인용해도 정답 처리됩니다. (Recall의 이 한계는 v3의 Anchor Recall로 해소했으나, 인용의 섹션 단위 채점은 미적용 상태)
 - Citation Precision만 있고 **Citation Recall**(근거 문서를 빠짐없이 인용했는가)은 없습니다 — 다중 근거 문항이 적어 분모가 불안정하기 때문입니다.
 - Faithfulness judge는 "컨텍스트에 있는 내용인가"만 보므로, 컨텍스트 자체가 질문과 무관하면 무관한 답변도 faithful로 판정할 수 있습니다 (Correctness가 이를 보완).
-- Judge 점수는 rubric 해석에 의존하며 완전히 결정적이지 않습니다 — 동일 입력 재실행 시 ±0.5 등급 흔들림 가능(실험 8에서 Judge 간 11% 불일치로 정량화).
+- Judge 점수는 rubric 해석에 의존합니다. 단 분산의 원천을 실측으로 분리하면(실험 10-①): **동일 입력·동일 judge 반복은 결정적**(3회 0/27)이고, 흔들림은 **생성 재실행**(답변 자체가 변함)과 **judge 모델 교체**(Gemini↔Claude 11% 불일치, 실험 8)에서 옵니다 — 즉 판정 불확실성은 모델 선택에서 오지 반복에서 오지 않습니다.
 
 **재현성** — run마다 `eval/runs/<timestamp>_<retriever>/`에 기록:
 
@@ -323,6 +324,7 @@ run report(`report.md`)의 Summary 표에 metric별 gate/target 대비 상태(�
 | 7 | 상용 프롬프트 대조 갭 3종 | 갭 보완이 품질 개선 | **대부분 기각** — injection 가드 한 줄만 예방 채택 |
 | 8 | Judge ablation | Judge를 바꾸면 correctness가 흔들릴 것 | 집계 동일(0.907), 문항 3/27 반대 상쇄 — **총점 동일 ≠ Judge 대체 가능** |
 | 9 | 생성 모델 ablation | 생성 모델별 품질·규약 준수 차이 | GPT-5.6 Sol·Claude 대등, **Gemini만 gate 미달**(citation 형식 불일치) — 생성 모델 선정 근거 |
+| 10 | 평가·검색 신뢰성 추가 검증 (4종) | Judge 분산·threshold·rerank 프롬프트·섹션 citation | Judge 반복 분산 **0** · threshold 분포 겹침(sentinel 정당성) · rerank 프롬프트 **기각** · 섹션 citP는 감사 선행 필요 |
 
 > 실험 1~7의 수치는 **개발기 모델(생성 gpt-4o-mini + judge gpt-4o)** 로 측정됐고, goldset도 v2→v6로 확장됐습니다. 각 실험 표의 절대값은 그 실험 시점의 모델·goldset 기준이며, 실험 간 결론(가설의 채택/기각)은 동일 조건 within-실험 비교에서 나온 것입니다. 엘리스 공식 모델 baseline은 위 "사용 모델 & 공식 baseline" 표 참조 — 개발기에서 검증된 rerank 우위·라벨 감사·유형 확장 등의 결론은 공식 모델에서도 재현됐습니다. 실험 8·9는 엘리스 공식 모델로 수행했습니다.
 
@@ -646,19 +648,75 @@ goldset v6·en 기준 (run: `06-13-10` Gemini 생성, `06-21-54` Claude 생성, 
 - **한계**: judge 고정이 Gemini라 Gemini 생성에는 self-preference로 유리하고 Claude·GPT에는 중립~불리한 비대칭이 있습니다. 그럼에도 불리해야 할 GPT/Claude가 오히려 gate를 통과하고 유리해야 할 Gemini가 미달했으므로, 결론(Gemini 생성 부적합)은 이 비대칭에 반하는 방향이라 오히려 견고합니다. 완전한 공정 비교는 복수 Judge 교차 채점이 필요합니다.
 </details>
 
+<details>
+<summary><b>실험 10 — 평가·검색 신뢰성 추가 검증 (Judge 분산 · threshold · rerank 프롬프트 · 섹션 citation)</b> · 2건 근거 보강 · 1건 기각 · 1건 감사 선행 확정</summary>
+
+#### 동기
+
+평가 harness와 검색 게이트가 실제로 얼마나 믿을 만한지를 저비용 측정 4종으로 추가 검증했습니다 — Judge 판정의 재현성, 검색 점수 기반 거부 게이트의 실효, rerank 프롬프트 개선 여지, 인용 정밀도의 섹션 단위 해상도. 스크립트 3종을 신설했습니다(`scripts/judge-variance.ts`, `threshold-tune.ts`, `section-citation.ts`).
+
+#### ① Judge 반복 분산 실측 (`judge-variance.ts`) — 근거 보강
+
+저장된 dense run(`02-21-10`)의 동일 답변을 Gemini judge로 **3회** 재채점했습니다.
+
+| | run1 | run2 | run3 | 문항 분산 |
+|---|---|---|---|---|
+| Correctness | 0.907 | 0.907 | 0.907 | **0/27** |
+| Faithfulness | 0.981 | 0.981 | 0.981 | **0/27** |
+
+- **같은 judge·같은 답변 반복은 완전히 결정적**이었습니다(temperature 0). 그동안 뭉뚱그린 "judge ±0.5 분산"의 실체는 judge 반복이 아니라 **① 생성 분산**(run마다 답변 자체가 변함, 실험 3·5)과 **② judge 모델 교체**(Gemini↔Claude 11% 불일치, 실험 8) 두 가지였음을 분리 확인했습니다.
+- 실험 8과 짝지어 **"Judge 불확실성은 모델 선택에서 오지 반복에서 오지 않는다"**를 실측했습니다. 단 n=1 엔드포인트·3회 관측이라 "완전 결정적" 단정이 아니라 "이 판정들에서 재현적"으로 서술합니다.
+
+#### ② threshold 데이터 튜닝 (`threshold-tune.ts`) — 근거 보강
+
+en 문항의 dense top-1 코사인 유사도 분포(LLM 불개입, 검색만):
+
+| | n | min | max | mean |
+|---|---|---|---|---|
+| answerable | 29 | 0.476 | 0.770 | 0.638 |
+| unanswerable | 5 | 0.404 | 0.649 | 0.549 |
+
+- **두 분포가 겹칩니다** (answerable 최소 0.476 < unanswerable 최대 0.649 — q23 unanswerable이 0.649로 다수 answerable보다 높음). 단일 threshold로 안전하게 가를 수 없습니다. **이것이 검색 gate 단독으로 hallucination을 막지 못하고 sentinel(생성 단계 거부)이 필요한 설계의 데이터 근거**입니다.
+- 다만 `RETRIEVAL_MIN_SCORE ≈ 0.4~0.45`는 **false refusal 0을 지키면서** 가장 명백한 무관 질의(q22, top-1 0.404)만 생성 호출 전에 차단하는 **무해한 보조 게이트**로 유효합니다(비용·지연 절감). sentinel의 대체가 아니라 보완입니다.
+
+#### ③ Rerank reference 섹션 프롬프트 보정 — 기각·롤백
+
+실험 3에서 관측된 "reference 섹션(Parameters/Returns) 과소평가"를 겨냥해 rerank 프롬프트에 "정의·시그니처를 담은 reference 섹션도 산문 못지않게 직접 답이 될 수 있다"를 추가했습니다.
+
+| metric | before | after |
+|---|---|---|
+| **Anchor Recall@k** | 0.750 | **0.750** (변화 없음) |
+| MRR | 0.874 | 0.874 |
+| Citation Precision | 0.930 | 0.910 (분산 범위) |
+
+- 프롬프트 해시는 바뀌었으나(변경 반영 확인) **목표 지표 Anchor Recall이 전혀 안 움직였습니다.** 실험 3의 진단 — "reference 과소평가는 후보 수도 프롬프트도 아닌 rerank 모델의 선별 판단 문제" — 을 재확인했습니다. **"측정으로 효과 없으면 프롬프트를 늘리지 않는다"**(실험 7 원칙)에 따라 롤백했습니다. topK=10/후보40 구성에서의 재검증은 Next Step으로 남깁니다.
+
+#### ④ 섹션 단위 Citation Precision (`section-citation.ts`) — 구현·진단, 감사 선행 확정
+
+인용한 청크의 섹션 앵커가 `expectedAnchors`(정당한 섹션)에 속하는지로 섹션 단위 정밀도를 계산했습니다(Anchor Recall의 인용판, LLM 불개입).
+
+- **매칭 기준을 코드리뷰가 정정**: 초안은 인용 청크 url의 `#fragment` **하나**로 매칭했으나, url에는 병합 청크의 **첫** 앵커만 담깁니다(ingest의 `chunkUrl`). 반면 프로젝트 표준 `anchorRecallAtK`는 청크의 `anchors[]` **전체**를 봅니다. 이 불일치로 병합 청크의 정당 인용이 부당하게 "밖"으로 집계돼 섹션 citP가 **절반가량 과소보고**됐습니다(dense 0.222 → 정정 후 **0.361**, rerank 0.178 → **0.333**). `chunkId`로 DB의 `anchors[]`를 조회해 표준과 동일 기준으로 고쳤습니다.
+- 정정 후에도 값이 낮은 이유는 **실험 4에서 문서 단위로 겪은 라벨 커버리지 아티팩트가 섹션 단위에서 더 심화된 것**입니다. 앵커 밖 인용 23건(dense) 대부분이 같은 문서의 정당한 인접 섹션입니다 — 표본: q02는 질문이 "no dependency array면 언제 실행?"인데 인용 청크가 **정답 섹션 `passing-no-dependency-array-at-all`을 담고 있음에도** `expectedAnchors`가 `parameters`만 라벨해 "밖"으로 잡힙니다.
+- 정당한 metric이 되려면 `acceptableAnchors` 라벨 감사(실험 4 방법론의 섹션 버전)가 선행돼야 함을 데이터로 확정했습니다 — metric 구현은 완료, 라벨 확장이 정확한 Next Step입니다.
+
+#### 종합
+
+4종을 실측하니 **2건(①②)은 기존 설계 주장에 데이터 근거를 보강**(Judge 재현성, sentinel 필요성), **1건(③)은 기각·롤백**, **1건(④)은 구현하되 정확한 후속 조건을 특정**하는 결과였습니다. 개선 아이디어를 실제로 측정하면 상당수가 기각되거나 전제 조건이 붙는다는 것을 다시 확인한 셈입니다.
+</details>
+
 ### Next Steps
 
 - **Reranker의 reference 섹션 과소평가 보정**: 후속 측정에서 후보 확대(40개)로도 해소되지 않는 일관된 선별 손실(q02·q09 — Parameters/Returns 섹션)이 확인됨 — rerank 프롬프트에 "정의·시그니처를 담은 reference 섹션도 직접 답이 될 수 있음"을 명시하거나 선택 근거 서술을 요구하는 프롬프트 실험이 다음 단계
 - **청크별 고유 문맥 임베딩 (contextual retrieval)**: 실험 6에서 공유 접두어(breadcrumb)는 섹션 변별력을 훼손함이 확인됨 — 청크마다 고유한 문맥 요약을 LLM으로 생성해 접두하는 방식이면 부작용 없이 분할 조각 문제를 풀 수 있다는 후속 가설 (임베딩 비용 + 청크당 LLM 호출 1회의 ingest 비용 트레이드오프)
 - **Query decomposition**: multi-hop 질의를 하위 질의로 분해해 각각 검색 후 병합 — q26~q30의 "두 번째 문서 섹션 누락" 대응
-- **Citation Precision의 섹션 단위 채점**: 인용 채점을 anchor 수준으로 내려 평가 해상도 정합성 완성
-- **Judge 반복 실행**: 동일 run을 judge만 3회 반복해 판정 분산을 실측 — 실험 3의 Correctness 차이가 분산보다 큰지 검정
+- **섹션 단위 Citation Precision 라벨 감사**: metric은 구현 완료(실험 10-④)이나 `acceptableAnchors` 라벨 부재로 현재는 하한 추정 — 실험 4 방법론(관측 기반 감사)을 섹션 단위로 반복해 정당한 인접 섹션을 라벨하면 정확한 metric이 됨
+- **Rerank reference 섹션 개선의 파이프라인 해법**: 프롬프트 보정은 효과 없음이 확인됨(실험 10-③) — topK=10/후보40 구성 재검증, 또는 reference 섹션을 별도 가중하는 검색 단계 해법이 다음 후보
 - **Gold Set 확장**: 실사용 질의 로그 기반 문항 추가, 복수 라벨러 합의로 라벨 신뢰도 향상
 
 ## 한계점 및 알려진 이슈
 
 - **토큰 카운팅 근사**: 청킹 상한은 js-tiktoken(cl100k)으로 계산 — 실제 서빙 모델의 토크나이저와 다를 수 있으나 청킹 용도로는 오차가 동작에 영향 없음
-- **threshold 미튜닝 상태**: `RETRIEVAL_MIN_SCORE` 기본 0(비활성) — sentinel 프로토콜이 1차 방어를 담당하며, gate는 Eval 데이터 축적 후 튜닝
+- **threshold 보조 게이트 미적용**: `RETRIEVAL_MIN_SCORE` 기본 0(비활성). 실험 10-②에서 answerable/unanswerable 점수 분포가 겹쳐 단일 threshold로는 못 가름을 실측했고(그래서 sentinel이 1차 방어), 0.4~0.45가 false refusal 0을 지키는 무해한 보조 게이트임을 확인 — 서비스에 적용하려면 이 값을 기본으로 켜는 것이 다음 단계
 - **한국어 질의**: 영어 corpus 대상 cross-lingual 검색 품질은 임베딩 모델에 전적으로 의존하며, FTS(english) 경로는 한국어 질의에 기여하지 못함
 - **usage 미수집(스트리밍)**: SSE 경로는 토큰 usage를 0으로 반환 (OpenAI 호환 스트리밍의 usage 옵션 지원 여부가 게이트웨이별로 달라 비활성)
 - **rerank 파싱 실패 fallback**: reranker의 LLM 출력에서 순위 배열을 추출하지 못하면 dense 원 순위를 사용 — 실패 횟수는 run 메타데이터에 기록되지만, fallback이 발생한 run은 rerank 효과를 과소평가하는 방향으로 편향됨
