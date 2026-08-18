@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { loadConfig } from '../src/config.js';
+import { clientConfigOf, loadConfig } from '../src/config.js';
 import { createPool, deleteStaleChunks, existingChunkIds, upsertChunks } from '../src/db.js';
 import { type Chunk, chunkDocument } from '../src/ingest/chunker.js';
 import { cleanMdx } from '../src/ingest/mdx-clean.js';
@@ -19,7 +19,7 @@ function chunkUrl(chunk: Chunk): string {
 async function main() {
   const config = loadConfig();
   const pool = createPool(config.DATABASE_URL);
-  const llm = createOpenAiCompatibleClient(config);
+  const llm = createOpenAiCompatibleClient(clientConfigOf(config));
 
   const allChunks: Chunk[] = [];
   for (const dir of CORPUS_DIRS) {
@@ -42,7 +42,10 @@ async function main() {
 
   for (let i = 0; i < newChunks.length; i += EMBED_BATCH_SIZE) {
     const batch = newChunks.slice(i, i + EMBED_BATCH_SIZE);
-    const embeddings = await llm.embed(batch.map((chunk) => chunk.content));
+    const embeddings = await llm.embed(
+      config.EMBEDDING_MODEL,
+      batch.map((chunk) => chunk.content),
+    );
     await upsertChunks(pool, batch, embeddings, chunkUrl);
     console.log(`  ${Math.min(i + EMBED_BATCH_SIZE, newChunks.length)}/${newChunks.length}`);
   }

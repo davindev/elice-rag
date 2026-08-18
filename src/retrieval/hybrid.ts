@@ -12,11 +12,15 @@ import { fuseRrf } from './rrf.js';
  */
 export const HYBRID_CANDIDATE_MULTIPLIER = 4;
 
-export function createHybridRetriever(pool: pg.Pool, llm: LlmClient): Retriever {
+export function createHybridRetriever(
+  pool: pg.Pool,
+  llm: LlmClient,
+  embeddingModel: string,
+): Retriever {
   return {
     async retrieve(query, topK) {
       const candidateK = topK * HYBRID_CANDIDATE_MULTIPLIER;
-      const [embedding] = await llm.embed([query]);
+      const [embedding] = await llm.embed(embeddingModel, [query]);
       if (embedding === undefined) {
         throw new Error('쿼리 임베딩 결과가 비어 있습니다');
       }

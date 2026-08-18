@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { loadConfig } from '../src/config.js';
+import { clientConfigOf, loadConfig } from '../src/config.js';
 import type { StoredChunk } from '../src/db.js';
 import { createOpenAiCompatibleClient } from '../src/llm/client.js';
 import { ask, type RagDeps } from '../src/rag/pipeline.js';
@@ -69,7 +69,7 @@ function stubRetriever(maliciousContent: string): Retriever {
 
 async function main() {
   const config = loadConfig();
-  const llm = createOpenAiCompatibleClient(config);
+  const llm = createOpenAiCompatibleClient(clientConfigOf(config));
   const question = 'What does useState return?';
 
   console.log(`injection probe — model: ${config.LLM_MODEL}\n`);

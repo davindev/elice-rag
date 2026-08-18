@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import type { Config } from '../config.js';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -28,23 +27,47 @@ export interface LlmClient {
     messages: ChatMessage[],
     options?: { temperature?: number },
   ): AsyncIterable<string>;
-  embed(texts: string[]): Promise<number[][]>;
+  embed(model: string, texts: string[]): Promise<number[][]>;
 }
 
-export function createOpenAiCompatibleClient(
-  config: Pick<Config, 'ELICE_API_KEY' | 'ELICE_BASE_URL' | 'EMBEDDING_MODEL'>,
-): LlmClient {
-  const openai = new OpenAI({
-    apiKey: config.ELICE_API_KEY,
-    baseURL: config.ELICE_BASE_URL,
-  });
+export interface ClientConfig {
+  apiKey: string;
+  /** model 이름 → 그 모델의 base_url. 엘리스는 모델(엔드포인트)마다 base_url이 다르다 */
+  endpoints: Record<string, string>;
+  /**
+   * temperature를 지원하지 않는 모델 집합. reasoning 모델(예: GPT-5.6 Sol)은
+   * temperature=0을 400으로 거부하므로, 이 집합의 모델에는 temperature를 아예 보내지 않는다.
+   * (스모크 테스트로 실측해 채운다)
+   */
+  noTemperatureModels?: ReadonlySet<string>;
+}
+
+export function createOpenAiCompatibleClient(config: ClientConfig): LlmClient {
+  const noTemperature = config.noTemperatureModels ?? new Set<string>();
+  // model → OpenAI SDK 클라이언트 (엔드포인트별로 1개씩 캐시)
+  const clients = new Map<string, OpenAI>();
+  const clientFor = (model: string): OpenAI => {
+    const cached = clients.get(model);
+    if (cached !== undefined) return cached;
+    const baseURL = config.endpoints[model];
+    if (baseURL === undefined) {
+      throw new Error(`모델 '${model}'의 base_url이 설정되지 않았습니다 (config.endpoints 확인)`);
+    }
+    const client = new OpenAI({ apiKey: config.apiKey, baseURL });
+    clients.set(model, client);
+    return client;
+  };
+
+  // temperature 지원 모델에만 값을 실어 보낸다 (미지원 모델엔 파라미터 자체를 생략)
+  const temperatureParam = (model: string, value: number | undefined) =>
+    noTemperature.has(model) ? {} : { temperature: value ?? 0 };
 
   return {
     async chat(model, messages, options = {}) {
-      const response = await openai.chat.completions.create({
+      const response = await clientFor(model).chat.completions.create({
         model,
         messages,
-        temperature: options.temperature ?? 0,
+        ...temperatureParam(model, options.temperature),
       });
       const choice = response.choices[0];
       if (choice?.message.content == null) {
@@ -60,10 +83,10 @@ export function createOpenAiCompatibleClient(
     },
 
     async *chatStream(model, messages, options = {}) {
-      const stream = await openai.chat.completions.create({
+      const stream = await clientFor(model).chat.completions.create({
         model,
         messages,
-        temperature: options.temperature ?? 0,
+        ...temperatureParam(model, options.temperature),
         stream: true,
       });
       for await (const part of stream) {
@@ -72,11 +95,8 @@ export function createOpenAiCompatibleClient(
       }
     },
 
-    async embed(texts) {
-      const response = await openai.embeddings.create({
-        model: config.EMBEDDING_MODEL,
-        input: texts,
-      });
+    async embed(model, texts) {
+      const response = await clientFor(model).embeddings.create({ model, input: texts });
       // API는 index 순서를 보장하지 않으므로 명시적으로 정렬한다
       return [...response.data].sort((a, b) => a.index - b.index).map((d) => d.embedding);
     },

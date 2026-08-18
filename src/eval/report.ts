@@ -40,7 +40,8 @@ export interface RunConfig {
   llmModel: string;
   embeddingModel: string;
   judgeModel: string;
-  temperature: number;
+  /** null = 모델이 temperature 미지원(reasoning)이라 파라미터를 보내지 않음 */
+  temperature: number | null;
   topK: number;
   minScore: number;
   corpusSha: string;

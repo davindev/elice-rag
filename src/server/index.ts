@@ -1,5 +1,5 @@
 import { serve } from '@hono/node-server';
-import { loadConfig } from '../config.js';
+import { clientConfigOf, loadConfig } from '../config.js';
 import { createPool } from '../db.js';
 import { createOpenAiCompatibleClient } from '../llm/client.js';
 import { createRetriever } from '../retrieval/index.js';
@@ -7,12 +7,13 @@ import { createApp } from './app.js';
 
 const config = loadConfig();
 const pool = createPool(config.DATABASE_URL);
-const llm = createOpenAiCompatibleClient(config);
+const llm = createOpenAiCompatibleClient(clientConfigOf(config));
 
 const app = createApp({
   retriever: createRetriever(config.RETRIEVER, {
     pool,
     llm,
+    embeddingModel: config.EMBEDDING_MODEL,
     rerankModel: config.RERANK_MODEL ?? config.LLM_MODEL,
   }),
   llm,

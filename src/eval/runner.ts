@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { loadConfig } from '../config.js';
+import { clientConfigOf, loadConfig } from '../config.js';
 import { CORPUS_PINNED_SHA } from '../corpus-version.js';
 import { createPool, indexFingerprint } from '../db.js';
 import { EMBED_INPUT_SCHEME } from '../ingest/chunker.js';
@@ -142,7 +142,7 @@ async function main() {
   const config = loadConfig();
   const retrieverKind = resolveRetrieverKind(config.RETRIEVER);
   const pool = createPool(config.DATABASE_URL);
-  const llm = createOpenAiCompatibleClient(config);
+  const llm = createOpenAiCompatibleClient(clientConfigOf(config));
 
   const rerankModel = config.RERANK_MODEL ?? config.LLM_MODEL;
   // rerank fallback(파싱 실패 → 원 순위 사용)은 rerank arm에 base 결과를 섞으므로
@@ -153,6 +153,7 @@ async function main() {
     retriever: createRetriever(retrieverKind, {
       pool,
       llm,
+      embeddingModel: config.EMBEDDING_MODEL,
       rerankModel,
       rerankOptions: {
         onFallback: (raw) => {
@@ -195,7 +196,8 @@ async function main() {
       llmModel: config.LLM_MODEL,
       embeddingModel: config.EMBEDDING_MODEL,
       judgeModel: config.JUDGE_MODEL,
-      temperature: 0,
+      // reasoning 모델은 temperature 미지원이라 생략 — 생성 결정성이 그만큼 더 약함(재현성 한계)
+      temperature: config.NO_TEMPERATURE_MODELS.has(config.LLM_MODEL) ? null : 0,
       topK: config.TOP_K,
       minScore: config.RETRIEVAL_MIN_SCORE,
       corpusSha: CORPUS_PINNED_SHA,

@@ -12,6 +12,7 @@ export type RetrieverKind = (typeof RETRIEVER_KINDS)[number];
 export interface RetrieverDeps {
   pool: pg.Pool;
   llm: LlmClient;
+  embeddingModel: string;
   /** rerank 전용 — 생성 모델과 독립적으로 교체 가능해야 ablation·run 비교가 유효 */
   rerankModel: string;
   rerankOptions?: RerankOptions;
@@ -31,22 +32,24 @@ const withRerank = (base: Retriever, deps: RetrieverDeps): Retriever =>
 const RETRIEVER_SPECS: Record<RetrieverKind, RetrieverSpec> = {
   dense: {
     usesRerank: false,
-    create: (deps) => createDenseRetriever(deps.pool, deps.llm),
+    create: (deps) => createDenseRetriever(deps.pool, deps.llm, deps.embeddingModel),
   },
   hybrid: {
     usesRerank: false,
-    create: (deps) => createHybridRetriever(deps.pool, deps.llm),
+    create: (deps) => createHybridRetriever(deps.pool, deps.llm, deps.embeddingModel),
   },
   // base는 dense — 실험 2(top-5)와 후속 측정 2(후보 20개 깊이) 모두에서 hybrid base의 이득이 없음을 확인
   rerank: {
     usesRerank: true,
-    create: (deps) => withRerank(createDenseRetriever(deps.pool, deps.llm), deps),
+    create: (deps) =>
+      withRerank(createDenseRetriever(deps.pool, deps.llm, deps.embeddingModel), deps),
   },
   // 실험용: hybrid를 base로 하는 rerank. 주의 — rerank가 후보 topK×4를 요청하면
   // hybrid가 내부에서 다시 ×4를 곱하므로 실제 DB 검색 깊이는 dense/FTS 각 topK×16
   'hybrid-rerank': {
     usesRerank: true,
-    create: (deps) => withRerank(createHybridRetriever(deps.pool, deps.llm), deps),
+    create: (deps) =>
+      withRerank(createHybridRetriever(deps.pool, deps.llm, deps.embeddingModel), deps),
   },
 };
 
