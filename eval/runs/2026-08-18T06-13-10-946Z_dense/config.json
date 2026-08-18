@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-08-18T06:13:10.946Z",
+  "retriever": "dense",
+  "llmModel": "gemini-3.1-pro-preview",
+  "embeddingModel": "text-embedding-3-small",
+  "judgeModel": "gemini-3.1-pro-preview",
+  "temperature": 0,
+  "topK": 5,
+  "minScore": 0,
+  "corpusSha": "383a1e9239c8c084a16a19daa4fc2a7ad04e2a3a",
+  "embeddingInput": "content",
+  "indexChunkCount": 1003,
+  "indexIdsSha": "5d2b6a4b3290529f05b7b27129278a7775a0daf9b031ae12a5bbd8e10ec75102",
+  "strictMode": false,
+  "ragPromptHash": "49480e1eda2721188b45203876fe33b129e2d262498694400ad085daf0a26a84",
+  "rewritePromptHash": "2fec14908b8288f2d5dd3848d5508b510454c61dbbe3ad19e9eaa6db816633d5",
+  "judgePromptHash": "9a519b0fae498971e6816bd4ca67464fc4c9b69d3bcd7eceab346ccbfb4cbb5b",
+  "goldsetHash": "892f992f7ac1c26a6f416c5526c9b39bfe3f937ad38f18453e5e5bcc2c0522b4",
+  "nodeVersion": "v22.11.0"
+}
