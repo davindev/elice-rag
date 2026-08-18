@@ -52,6 +52,13 @@ const goldItemSchema = z.object({
    */
   expectedAnchors: z.array(z.object({ doc: z.string(), anchor: z.string() })).optional(),
   /**
+   * 섹션 단위 Citation Precision(section-citation.ts) 실험 전용 라벨. 정답 근거 문서 내에서
+   * 인용해도 정당한 섹션을, dense 런이 인용한 앵커 밖 섹션을 corpus 원문 대조로 감사해 추가했다.
+   * ⚠️ 관측(dense 인용) 기반이라 리트리버 간 비대칭·순환 편향이 있어 gate에 쓰지 않는다
+   * (실험 10-④ 참조). 정식 metric은 리트리버 독립 라벨링이 선행돼야 한다.
+   */
+  acceptableAnchors: z.array(z.object({ doc: z.string(), anchor: z.string() })).optional(),
+  /**
    * 인용해도 정당한 추가 문서 — Citation Precision 판정에만 사용 (Recall에는 불포함).
    * expectedEvidence(필수 근거)와 분리한 이유: corpus에 챕터 인덱스 등 같은 내용을
    * 담은 문서가 복수 존재해, "필요한 것을 찾았는가"(recall)와 "인용이 정당한가"(precision)의

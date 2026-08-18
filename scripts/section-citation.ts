@@ -54,19 +54,24 @@ async function main() {
   for (const r of results) {
     const g = goldset.get(r.id);
     if (g === undefined || r.language !== 'en') continue;
-    const anchors = g.expectedAnchors;
-    if (anchors === undefined || anchors.length === 0) continue; // 앵커 라벨 문항만 (factoid·multihop)
+    if (g.expectedAnchors === undefined || g.expectedAnchors.length === 0) continue; // 앵커 라벨 문항만
+    // 정당한 섹션 = 필수(expectedAnchors) ∪ 감사로 승격된 정당 섹션(acceptableAnchors)
+    const anchors = [...g.expectedAnchors, ...(g.acceptableAnchors ?? [])];
+    // 정당 근거 문서 — anchor 없는 도입부 청크(정의 요약)를 doc-level로 인정하기 위함
+    const legitDocs = new Set([...g.expectedEvidence, ...(g.acceptableEvidence ?? [])]);
 
     for (const c of r.citedChunks) {
-      citedTotal++;
       const info = byId.get(c.chunkId);
       if (info === undefined) {
-        missing.push(c.chunkId);
-        outOfAnchor.push({ id: r.id, docPath: c.docPath, anchors: [] });
+        missing.push(c.chunkId); // 인덱스 불일치 — 품질과 무관하므로 분모에서 제외
         continue;
       }
-      // 정당한 인용: expectedAnchors 중 하나라도 (문서 일치 && 청크 anchors[]에 포함)
-      const legit = anchors.some((e) => e.doc === info.docPath && info.anchors.includes(e.anchor));
+      citedTotal++;
+      // anchor 없는 도입부 청크는 섹션 식별자가 없어 섹션 매칭 불가 → 정당 근거 문서면 doc-level로 인정
+      const legit =
+        info.anchors.length === 0
+          ? legitDocs.has(info.docPath)
+          : anchors.some((e) => e.doc === info.docPath && info.anchors.includes(e.anchor));
       if (legit) citedInAnchor++;
       else outOfAnchor.push({ id: r.id, docPath: info.docPath, anchors: info.anchors });
     }
