@@ -287,7 +287,7 @@ run report(`report.md`)의 Summary 표에 metric별 gate/target 대비 상태(�
 
 **Metric의 한계와 맹점 (인지하고 있는 것):**
 
-- Citation Precision은 여전히 **문서 단위** 매칭 — 같은 문서의 엉뚱한 섹션을 인용해도 정답 처리됩니다. (Recall의 이 한계는 v3의 Anchor Recall로 해소했으나, 인용의 섹션 단위 채점은 미적용 상태)
+- gate/target에 걸리는 Citation Precision은 **문서 단위** 매칭이라 같은 문서의 엉뚱한 섹션 인용을 잡지 못합니다. 실험 10-④에서 **섹션 단위 citP**(`section-citation.ts`)를 시제작했으나, 라벨을 시스템 인용 관측 기반으로 만들면 순환·리트리버 비대칭이 생김을 코드리뷰로 확인해 gate에 편입하지 않았습니다 — 리트리버 독립 라벨링이 선행돼야 합니다.
 - Citation Precision만 있고 **Citation Recall**(근거 문서를 빠짐없이 인용했는가)은 없습니다 — 다중 근거 문항이 적어 분모가 불안정하기 때문입니다.
 - Faithfulness judge는 "컨텍스트에 있는 내용인가"만 보므로, 컨텍스트 자체가 질문과 무관하면 무관한 답변도 faithful로 판정할 수 있습니다 (Correctness가 이를 보완).
 - Judge 점수는 rubric 해석에 의존합니다. 단 분산의 원천을 실측으로 분리하면(실험 10-①): **동일 입력·동일 judge 반복은 결정적**(3회 0/27)이고, 흔들림은 **생성 재실행**(답변 자체가 변함)과 **judge 모델 교체**(Gemini↔Claude 11% 불일치, 실험 8)에서 옵니다 — 즉 판정 불확실성은 모델 선택에서 오지 반복에서 오지 않습니다.
@@ -324,7 +324,7 @@ run report(`report.md`)의 Summary 표에 metric별 gate/target 대비 상태(�
 | 7 | 상용 프롬프트 대조 갭 3종 | 갭 보완이 품질 개선 | **대부분 기각** — injection 가드 한 줄만 예방 채택 |
 | 8 | Judge ablation | Judge를 바꾸면 correctness가 흔들릴 것 | 집계 동일(0.907), 문항 3/27 반대 상쇄 — **총점 동일 ≠ Judge 대체 가능** |
 | 9 | 생성 모델 ablation | 생성 모델별 품질·규약 준수 차이 | GPT-5.6 Sol·Claude 대등, **Gemini만 gate 미달**(citation 형식 불일치) — 생성 모델 선정 근거 |
-| 10 | 평가·검색 신뢰성 추가 검증 (4종) | Judge 분산·threshold·rerank 프롬프트·섹션 citation | Judge 반복 분산 **0** · threshold 분포 겹침(sentinel 정당성) · rerank 프롬프트 **기각** · 섹션 citP는 감사 선행 필요 |
+| 10 | 평가·검색 신뢰성 추가 검증 (4종) | Judge 분산·threshold·rerank·섹션 citation | Judge 반복 분산 **0** · threshold 적용 **기각**(false refusal 회귀) · rerank topK=10 recall↑·정밀도↓ 트레이드오프 · 섹션 citP는 **관측 기반 라벨의 순환성** 발견(비교 불가) |
 
 > 실험 1~7의 수치는 **개발기 모델(생성 gpt-4o-mini + judge gpt-4o)** 로 측정됐고, goldset도 v2→v6로 확장됐습니다. 각 실험 표의 절대값은 그 실험 시점의 모델·goldset 기준이며, 실험 간 결론(가설의 채택/기각)은 동일 조건 within-실험 비교에서 나온 것입니다. 엘리스 공식 모델 baseline은 위 "사용 모델 & 공식 baseline" 표 참조 — 개발기에서 검증된 rerank 우위·라벨 감사·유형 확장 등의 결론은 공식 모델에서도 재현됐습니다. 실험 8·9는 엘리스 공식 모델로 수행했습니다.
 
@@ -667,7 +667,7 @@ goldset v6·en 기준 (run: `06-13-10` Gemini 생성, `06-21-54` Claude 생성, 
 - **같은 judge·같은 답변 반복은 완전히 결정적**이었습니다(temperature 0). 그동안 뭉뚱그린 "judge ±0.5 분산"의 실체는 judge 반복이 아니라 **① 생성 분산**(run마다 답변 자체가 변함, 실험 3·5)과 **② judge 모델 교체**(Gemini↔Claude 11% 불일치, 실험 8) 두 가지였음을 분리 확인했습니다.
 - 실험 8과 짝지어 **"Judge 불확실성은 모델 선택에서 오지 반복에서 오지 않는다"**를 실측했습니다. 단 n=1 엔드포인트·3회 관측이라 "완전 결정적" 단정이 아니라 "이 판정들에서 재현적"으로 서술합니다.
 
-#### ② threshold 데이터 튜닝 (`threshold-tune.ts`) — 근거 보강
+#### ② threshold 데이터 튜닝 (`threshold-tune.ts`) → 적용 시도 → 기각
 
 en 문항의 dense top-1 코사인 유사도 분포(LLM 불개입, 검색만):
 
@@ -676,8 +676,9 @@ en 문항의 dense top-1 코사인 유사도 분포(LLM 불개입, 검색만):
 | answerable | 29 | 0.476 | 0.770 | 0.638 |
 | unanswerable | 5 | 0.404 | 0.649 | 0.549 |
 
-- **두 분포가 겹칩니다** (answerable 최소 0.476 < unanswerable 최대 0.649 — q23 unanswerable이 0.649로 다수 answerable보다 높음). 단일 threshold로 안전하게 가를 수 없습니다. **이것이 검색 gate 단독으로 hallucination을 막지 못하고 sentinel(생성 단계 거부)이 필요한 설계의 데이터 근거**입니다.
-- 다만 `RETRIEVAL_MIN_SCORE ≈ 0.4~0.45`는 **false refusal 0을 지키면서** 가장 명백한 무관 질의(q22, top-1 0.404)만 생성 호출 전에 차단하는 **무해한 보조 게이트**로 유효합니다(비용·지연 절감). sentinel의 대체가 아니라 보완입니다.
+- **두 분포가 겹칩니다** (answerable 최소 0.476 < unanswerable 최대 0.649 — q23 unanswerable이 0.649로 다수 answerable보다 높음). 단일 threshold로 안전하게 가를 수 없습니다. **이것이 검색 gate 단독으로 hallucination을 막지 못하고 sentinel(생성 단계 거부)이 필요한 설계의 데이터 근거**입니다(이 결론은 유효).
+- 정적 분포상 `RETRIEVAL_MIN_SCORE ≈ 0.45`가 answerable 최소(0.476)를 건드리지 않아 "무해한 보조 게이트"로 보였습니다. **그러나 실제로 `RETRIEVAL_MIN_SCORE=0.45`로 eval을 돌리니 false refusal이 0.069→0.103으로 올라 gate를 깼습니다** — baseline에서 답변하던 q12(경계 문항, top-1≈0.47)가 생성 비결정성·임베딩 미세변동으로 0.45 밑에 걸려 거부됐습니다.
+- **결론: threshold 적용 기각, `RETRIEVAL_MIN_SCORE=0` 유지.** 안전하게 켜려면 0.4 미만이어야 하는데 그러면 목표(q22 차단)를 못 합니다. **정적 시뮬레이션이 무해해 보여도 실제 적용은 경계 문항의 취약성을 드러낸다**는 교훈이며, 비용 절감 이득보다 false refusal 위험이 큽니다.
 
 #### ③ Rerank reference 섹션 프롬프트 보정 — 기각·롤백
 
@@ -689,19 +690,34 @@ en 문항의 dense top-1 코사인 유사도 분포(LLM 불개입, 검색만):
 | MRR | 0.874 | 0.874 |
 | Citation Precision | 0.930 | 0.910 (분산 범위) |
 
-- 프롬프트 해시는 바뀌었으나(변경 반영 확인) **목표 지표 Anchor Recall이 전혀 안 움직였습니다.** 실험 3의 진단 — "reference 과소평가는 후보 수도 프롬프트도 아닌 rerank 모델의 선별 판단 문제" — 을 재확인했습니다. **"측정으로 효과 없으면 프롬프트를 늘리지 않는다"**(실험 7 원칙)에 따라 롤백했습니다. topK=10/후보40 구성에서의 재검증은 Next Step으로 남깁니다.
+- 프롬프트 해시는 바뀌었으나(변경 반영 확인) **목표 지표 Anchor Recall이 전혀 안 움직였습니다.** 실험 3의 진단 — "reference 과소평가는 후보 수도 프롬프트도 아닌 rerank 모델의 선별 판단 문제" — 을 재확인했습니다. **"측정으로 효과 없으면 프롬프트를 늘리지 않는다"**(실험 7 원칙)에 따라 롤백했습니다.
 
-#### ④ 섹션 단위 Citation Precision (`section-citation.ts`) — 구현·진단, 감사 선행 확정
+**후속 — topK=10/후보40 재검증 (트레이드오프):** 프롬프트가 아니라 컨텍스트 예산을 늘리면 어떤지 측정했습니다(`TOP_K=10 --retriever rerank`, 후보 40).
 
-인용한 청크의 섹션 앵커가 `expectedAnchors`(정당한 섹션)에 속하는지로 섹션 단위 정밀도를 계산했습니다(Anchor Recall의 인용판, LLM 불개입).
+| metric | topK=5 | topK=10 |
+|---|---|---|
+| **Anchor Recall@k** | 0.750 | **0.906** (target 0.85 첫 돌파) |
+| MRR | 0.874 | 0.891 |
+| Faithfulness | 0.981 | 1.000 |
+| Citation Precision (문서) | 0.930 | 0.776 |
+| Citation Precision (섹션) | 0.889 | 0.724 |
+| False Refusal Rate | 0.069 | 0.103 (gate 미달) |
+| Correctness | 0.862 | 0.845 |
 
-- **매칭 기준을 코드리뷰가 정정**: 초안은 인용 청크 url의 `#fragment` **하나**로 매칭했으나, url에는 병합 청크의 **첫** 앵커만 담깁니다(ingest의 `chunkUrl`). 반면 프로젝트 표준 `anchorRecallAtK`는 청크의 `anchors[]` **전체**를 봅니다. 이 불일치로 병합 청크의 정당 인용이 부당하게 "밖"으로 집계돼 섹션 citP가 **절반가량 과소보고**됐습니다(dense 0.222 → 정정 후 **0.361**, rerank 0.178 → **0.333**). `chunkId`로 DB의 `anchors[]`를 조회해 표준과 동일 기준으로 고쳤습니다.
-- 정정 후에도 값이 낮은 이유는 **실험 4에서 문서 단위로 겪은 라벨 커버리지 아티팩트가 섹션 단위에서 더 심화된 것**입니다. 앵커 밖 인용 23건(dense) 대부분이 같은 문서의 정당한 인접 섹션입니다 — 표본: q02는 질문이 "no dependency array면 언제 실행?"인데 인용 청크가 **정답 섹션 `passing-no-dependency-array-at-all`을 담고 있음에도** `expectedAnchors`가 `parameters`만 라벨해 "밖"으로 잡힙니다.
-- 정당한 metric이 되려면 `acceptableAnchors` 라벨 감사(실험 4 방법론의 섹션 버전)가 선행돼야 함을 데이터로 확정했습니다 — metric 구현은 완료, 라벨 확장이 정확한 Next Step입니다.
+컨텍스트 예산을 10으로 늘리면 정답 섹션이 대거 포함돼 **Anchor Recall이 target을 처음 돌파(0.906)**하지만, 인용 후보가 많아져 **citP가 문서·섹션 모두 실제 하락**(섹션 0.889→0.724라 라벨 아티팩트가 아님)하고 false refusal이 gate를 깹니다. 단일 최적 구성은 없고 **"검색 recall 우선이냐 인용 정밀도·거부 억제 우선이냐"의 트레이드오프**이며, 프로덕션 채택은 지연·정밀도 요구에 달려 있습니다.
+
+#### ④ 섹션 단위 Citation Precision (`section-citation.ts`) — 구현 후 관측 기반 라벨의 순환성 발견
+
+문서 단위 citP는 "같은 문서의 엉뚱한 섹션 인용"을 못 잡습니다. 이를 메우려 인용 청크의 `anchors[]`가 정당한 섹션(expectedAnchors ∪ acceptableAnchors)에 속하는지로 섹션 단위 정밀도를 계산하는 metric을 만들고, 앵커 밖 인용을 감사해 정당 섹션을 `acceptableAnchors`로 승격했습니다. **그 과정에서 이 접근의 근본 한계를 코드리뷰가 드러냈습니다.**
+
+- **1차 코드리뷰 — 매칭 버그**: 초안은 url의 `#fragment` 하나로 매칭했으나 url엔 병합 청크의 첫 앵커만 담깁니다. 표준 `anchorRecallAtK`(청크 `anchors[]` 전체)와 어긋나 절반가량 과소보고(dense 0.222→0.361). `chunkId`로 DB `anchors[]`를 조회해 정정.
+- **2차 코드리뷰 — 라벨의 순환성·비대칭 (핵심)**: `acceptableAnchors`를 **dense 런이 실제 인용한 섹션**을 보고 승격했더니, 그 라벨셋이 dense에 유리하고 rerank가 인용한 **동등하게 정당한 다른 섹션**(예: q04에서 rerank가 인용한 `PureComponent#reference`, memo 도입부 정의)은 라벨에 없어 부당 감점됩니다. 즉 감사 후 상승분은 시스템 품질이 아니라 **라벨 추가가 만든 것**이고, 서로 다른 섹션을 고르는 리트리버 간 비교는 **무효**이며 절대값은 **상향 편향**입니다.
+- **조치**: (a) 코드 버그 수정 — anchor 없는 도입부 청크(가장 온토픽한 정의 요약)를 정당 근거 문서면 doc-level로 인정, 인덱스 불일치 chunkId는 분모에서 제외. (b) 과잉 라벨 4개 제거(q07 "켜는 법"·q28 "memo 남용론"·q29 챕터 인덱스). (c) **metric을 리트리버 비교용에서 "단일 시스템(dense)의 라벨 커버리지 진단"으로 강등** — 참고값 dense **0.889**(수정·감사 후)는 "필수 라벨만으로는 0.35, 관측된 정당 섹션을 반영하면 0.89"라는 **라벨 커버리지 효과의 크기**를 보여줄 뿐, 시스템 품질의 절대값이나 리트리버 순위로 읽어선 안 됩니다.
+- **실험 4 회고**: 문서 단위 acceptableEvidence(실험 4)도 같은 관측 기반이었으나, 문서 단위는 후보가 적어 전 리트리버가 0.957로 수렴해 비대칭이 안 드러났습니다. 섹션 단위로 해상도를 높이자 관측 기반 라벨의 순환·비대칭이 표면화된 것입니다. **정확한 섹션 citP는 리트리버 출력과 무관하게 각 문항의 정답 섹션을 corpus에서 독립 열거해야** 하며(Next Step), 이는 "품질 metric을 시스템 출력으로 라벨하면 그 시스템에 유리해진다"는 교훈의 실측 사례입니다.
 
 #### 종합
 
-4종을 실측하니 **2건(①②)은 기존 설계 주장에 데이터 근거를 보강**(Judge 재현성, sentinel 필요성), **1건(③)은 기각·롤백**, **1건(④)은 구현하되 정확한 후속 조건을 특정**하는 결과였습니다. 개선 아이디어를 실제로 측정하면 상당수가 기각되거나 전제 조건이 붙는다는 것을 다시 확인한 셈입니다.
+4종을 실측하니 **1건(①)은 설계 주장에 근거 보강**(Judge 재현성), **2건(②③)은 적용을 시도했으나 실제 회귀로 기각·트레이드오프**(threshold는 false refusal gate 미달, rerank topK=10은 recall↑·정밀도↓), **1건(④)은 새 metric을 만들다 관측 기반 라벨의 순환성이라는 방법론적 함정을 발견**했습니다. 네 건 모두 "개선안을 실제로 측정하면 기각되거나 전제가 붙거나 방법 자체가 반증된다"를 보여줍니다 — 특히 ②(시뮬레이션≠적용)와 ④(라벨이 시스템에 유리하게 순환)는 평가 harness를 만드는 과정에서 흔히 놓치는 함정입니다.
 </details>
 
 ### Next Steps
@@ -709,14 +725,14 @@ en 문항의 dense top-1 코사인 유사도 분포(LLM 불개입, 검색만):
 - **Reranker의 reference 섹션 과소평가 보정**: 후속 측정에서 후보 확대(40개)로도 해소되지 않는 일관된 선별 손실(q02·q09 — Parameters/Returns 섹션)이 확인됨 — rerank 프롬프트에 "정의·시그니처를 담은 reference 섹션도 직접 답이 될 수 있음"을 명시하거나 선택 근거 서술을 요구하는 프롬프트 실험이 다음 단계
 - **청크별 고유 문맥 임베딩 (contextual retrieval)**: 실험 6에서 공유 접두어(breadcrumb)는 섹션 변별력을 훼손함이 확인됨 — 청크마다 고유한 문맥 요약을 LLM으로 생성해 접두하는 방식이면 부작용 없이 분할 조각 문제를 풀 수 있다는 후속 가설 (임베딩 비용 + 청크당 LLM 호출 1회의 ingest 비용 트레이드오프)
 - **Query decomposition**: multi-hop 질의를 하위 질의로 분해해 각각 검색 후 병합 — q26~q30의 "두 번째 문서 섹션 누락" 대응
-- **섹션 단위 Citation Precision 라벨 감사**: metric은 구현 완료(실험 10-④)이나 `acceptableAnchors` 라벨 부재로 현재는 하한 추정 — 실험 4 방법론(관측 기반 감사)을 섹션 단위로 반복해 정당한 인접 섹션을 라벨하면 정확한 metric이 됨
+- **섹션 단위 Citation Precision의 리트리버 독립 라벨링**: 실험 10-④에서 관측 기반 라벨은 순환·비대칭임을 확인 — 각 문항의 정답 섹션을 리트리버 출력과 무관하게 corpus에서 독립 열거해야 정식 metric(gate 편입, 리트리버 비교)이 가능함
 - **Rerank reference 섹션 개선의 파이프라인 해법**: 프롬프트 보정은 효과 없음이 확인됨(실험 10-③) — topK=10/후보40 구성 재검증, 또는 reference 섹션을 별도 가중하는 검색 단계 해법이 다음 후보
 - **Gold Set 확장**: 실사용 질의 로그 기반 문항 추가, 복수 라벨러 합의로 라벨 신뢰도 향상
 
 ## 한계점 및 알려진 이슈
 
 - **토큰 카운팅 근사**: 청킹 상한은 js-tiktoken(cl100k)으로 계산 — 실제 서빙 모델의 토크나이저와 다를 수 있으나 청킹 용도로는 오차가 동작에 영향 없음
-- **threshold 보조 게이트 미적용**: `RETRIEVAL_MIN_SCORE` 기본 0(비활성). 실험 10-②에서 answerable/unanswerable 점수 분포가 겹쳐 단일 threshold로는 못 가름을 실측했고(그래서 sentinel이 1차 방어), 0.4~0.45가 false refusal 0을 지키는 무해한 보조 게이트임을 확인 — 서비스에 적용하려면 이 값을 기본으로 켜는 것이 다음 단계
+- **threshold 게이트 비활성 유지**: `RETRIEVAL_MIN_SCORE` 기본 0. 실험 10-②에서 answerable/unanswerable 점수 분포가 겹쳐 단일 threshold로는 못 가름을 실측했고(그래서 sentinel이 1차 방어), 0.45 적용을 실제로 시도했으나 경계 문항(q12) 거부로 false refusal gate가 깨져 **기각**했습니다 — sentinel 단독 방어를 유지합니다
 - **한국어 질의**: 영어 corpus 대상 cross-lingual 검색 품질은 임베딩 모델에 전적으로 의존하며, FTS(english) 경로는 한국어 질의에 기여하지 못함
 - **usage 미수집(스트리밍)**: SSE 경로는 토큰 usage를 0으로 반환 (OpenAI 호환 스트리밍의 usage 옵션 지원 여부가 게이트웨이별로 달라 비활성)
 - **rerank 파싱 실패 fallback**: reranker의 LLM 출력에서 순위 배열을 추출하지 못하면 dense 원 순위를 사용 — 실패 횟수는 run 메타데이터에 기록되지만, fallback이 발생한 run은 rerank 효과를 과소평가하는 방향으로 편향됨
