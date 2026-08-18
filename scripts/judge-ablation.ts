@@ -37,9 +37,8 @@ async function main() {
   const judgeDeps: JudgeDeps = { llm, judgeModel };
 
   const goldset = new Map((await loadGoldset(GOLDSET_PATH)).map((g) => [g.id, g]));
-  const results = JSON.parse(await readFile(path.join(runDir, 'results.json'), 'utf-8'), (_, v) =>
-    v === null ? Number.NaN : v,
-  ).results as Array<{
+  const results = JSON.parse(await readFile(path.join(runDir, 'results.json'), 'utf-8'))
+    .results as Array<{
     id: string;
     language: string;
     type: string;
