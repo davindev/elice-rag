@@ -5,12 +5,13 @@ import { loadGoldset, REFUSAL_TYPES } from '../src/eval/goldset.js';
 import { createOpenAiCompatibleClient } from '../src/llm/client.js';
 
 /**
- * RETRIEVAL_MIN_SCORE 데이터 튜닝 (한계점 "threshold 미튜닝" 해소).
+ * RETRIEVAL_MIN_SCORE 데이터 튜닝.
  *
  * answerable / unanswerable(+injection) 문항의 dense top-1 코사인 유사도 분포를
  * 실측해, 두 분포를 가르는 threshold 후보를 제안하고 그 값에서의
  * abstention / false refusal을 시뮬레이션한다. LLM 생성·judge 없이 검색만 사용.
  */
+
 const GOLDSET_PATH = path.resolve(import.meta.dirname, '../eval/goldset.jsonl');
 const refusalTypes = new Set<string>(REFUSAL_TYPES);
 
@@ -65,10 +66,8 @@ async function main() {
   }
 
   console.log('\n=== unanswerable 문항별 top-1 (거르기 어려운 순) ===');
-  scored
-    .filter((s) => s.refusalExpected)
-    .sort((a, b) => b.top1 - a.top1)
-    .forEach((s) => console.log(`  ${s.id} [${s.type}] top1=${s.top1.toFixed(3)}`));
+  const refusals = scored.filter((s) => s.refusalExpected).sort((a, b) => b.top1 - a.top1);
+  for (const s of refusals) console.log(`  ${s.id} [${s.type}] top1=${s.top1.toFixed(3)}`);
 }
 
 main().catch((error) => {

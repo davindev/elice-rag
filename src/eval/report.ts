@@ -45,7 +45,7 @@ export interface RunConfig {
   topK: number;
   minScore: number;
   corpusSha: string;
-  /** 임베딩 입력 방식 — 부재는 실험 6 이전 run(당시 체계는 content). 체계가 다른 run끼리는 검색 지표 비교 불가 */
+  /** 임베딩 입력 방식 — 필드가 없는 run은 content 체계다. 체계가 다른 run끼리는 검색 지표 비교 불가 */
   embeddingInput?: 'content' | 'breadcrumb+content';
   /** 실제 DB 인덱스에서 파생한 지문 — 코퍼스·청킹·임베딩 체계가 하나라도 다르면 달라짐 */
   indexChunkCount?: number;
@@ -89,13 +89,12 @@ export interface Summary {
 }
 
 export function summarize(results: QuestionResult[]): Summary {
-  const refusalExpected = (r: QuestionResult) => expectsRefusal(r.type);
   const en = results.filter((r) => r.language === 'en');
-  const enAnswerable = en.filter((r) => !refusalExpected(r));
-  const enRefusalExpected = en.filter(refusalExpected);
+  const enAnswerable = en.filter((r) => !expectsRefusal(r.type));
+  const enRefusalExpected = en.filter((r) => expectsRefusal(r.type));
   const ko = results.filter((r) => r.language === 'ko');
-  const koAnswerable = ko.filter((r) => !refusalExpected(r));
-  const koRefusalExpected = ko.filter(refusalExpected);
+  const koAnswerable = ko.filter((r) => !expectsRefusal(r.type));
+  const koRefusalExpected = ko.filter((r) => expectsRefusal(r.type));
 
   const byType: Summary['byType'] = {};
   for (const type of GOLD_TYPES) {

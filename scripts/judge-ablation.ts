@@ -1,13 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { clientConfigOf, loadConfig } from '../src/config.js';
-import { loadGoldset } from '../src/eval/goldset.js';
+import { expectsRefusal, loadGoldset } from '../src/eval/goldset.js';
 import { type JudgeDeps, judgeCorrectness, judgeFaithfulness } from '../src/eval/judge.js';
 import { mean } from '../src/eval/metrics.js';
+import type { QuestionResult } from '../src/eval/report.js';
 import { createOpenAiCompatibleClient } from '../src/llm/client.js';
 
 /**
- * Judge ablation (실험 8).
+ * Judge ablation — 같은 답변을 다른 Judge로 재채점.
  *
  * 동일 run의 **저장된 답변**을 서로 다른 Judge 모델로 재채점한다.
  * 답변을 재생성하지 않으므로 변인이 Judge 모델 하나로 완전히 격리된다 —
@@ -15,6 +16,13 @@ import { createOpenAiCompatibleClient } from '../src/llm/client.js';
  *
  * 사용법: tsx scripts/judge-ablation.ts <run디렉토리> <judgeModel>
  */
+
+// 과거 run은 결과 스키마가 더 좁다 — 이 스크립트가 실제로 읽는 필드만 주장한다 (citedChunks 있는 run 전용)
+type StoredAnswer = Pick<
+  QuestionResult,
+  'id' | 'language' | 'systemAnswerable' | 'answer' | 'citedChunks'
+>;
+
 const GOLDSET_PATH = path.resolve(import.meta.dirname, '../eval/goldset.jsonl');
 
 async function main() {
@@ -38,15 +46,7 @@ async function main() {
 
   const goldset = new Map((await loadGoldset(GOLDSET_PATH)).map((g) => [g.id, g]));
   const results = JSON.parse(await readFile(path.join(runDir, 'results.json'), 'utf-8'))
-    .results as Array<{
-    id: string;
-    language: string;
-    type: string;
-    question: string;
-    systemAnswerable: boolean;
-    answer: string;
-    citedChunks: { index: number; content: string }[];
-  }>;
+    .results as StoredAnswer[];
 
   console.log(`Judge ablation — run: ${path.basename(runDir)}, judge: ${judgeModel}\n`);
 
@@ -55,10 +55,11 @@ async function main() {
   const perItem: { id: string; correctness: number; faithfulness: number }[] = [];
 
   for (const r of results) {
-    // 원 run에서 judge를 호출했던 조건 그대로 재현: en answerable 문항만
+    // 원 run의 judge 호출 조건(비-거부 유형 & 시스템이 답변함) ∩ 주집계 대상(en).
+    // ko도 원 run에서는 judge되지만, en 헤드라인과 분모가 달라 비교 대상에서 제외한다.
     const g = goldset.get(r.id);
     if (g === undefined || r.language !== 'en') continue;
-    if (g.type === 'unanswerable' || g.type === 'injection') continue;
+    if (expectsRefusal(g.type)) continue;
     if (!r.systemAnswerable) continue; // false refusal은 원 run에서도 결정적 0 (judge 미호출)
 
     const citedPassages =

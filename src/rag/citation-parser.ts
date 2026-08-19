@@ -5,6 +5,7 @@
  *   존재하지 않는 근거를 가리키는 hallucinated citation 방지
  * - 유효한 인용 번호는 등장 순서를 유지하며 중복 제거해 반환
  */
+
 export interface ParsedCitations {
   /** 유효하지 않은 마커가 제거된 답변 본문 */
   text: string;

@@ -6,10 +6,11 @@ import type { Retriever } from './retriever.js';
 import { fuseRrf } from './rrf.js';
 
 /**
- * dense + FTS 하이브리드 검색 (Part C 실험).
+ * dense + FTS 하이브리드 검색.
  * 각 검색기에서 topK보다 깊게(CANDIDATE_MULTIPLIER배) 후보를 수집한 뒤 RRF로 융합 —
  * 융합 대상 후보가 topK뿐이면 두 검색기의 순위 차이가 결과에 반영될 여지가 없다.
  */
+
 export const HYBRID_CANDIDATE_MULTIPLIER = 4;
 
 export function createHybridRetriever(

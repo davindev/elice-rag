@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ClientConfig } from './llm/client.js';
 import { RETRIEVER_KINDS } from './retrieval/index.js';
 
 // 시스템 경계(환경 변수)에서만 런타임 검증을 수행한다.
@@ -76,11 +77,7 @@ export function endpointsOf(config: Config): Record<string, string> {
 }
 
 /** createOpenAiCompatibleClient에 넘길 클라이언트 설정을 config에서 구성 */
-export function clientConfigOf(config: Config): {
-  apiKey: string;
-  endpoints: Record<string, string>;
-  noTemperatureModels: ReadonlySet<string>;
-} {
+export function clientConfigOf(config: Config): ClientConfig {
   return {
     apiKey: config.ELICE_API_KEY,
     endpoints: endpointsOf(config),

@@ -3,9 +3,9 @@ import type { LlmClient } from '../llm/client.js';
 import type { Retriever } from './retriever.js';
 
 /**
- * LLM listwise reranker (Part C 실험 3).
+ * LLM listwise reranker.
  *
- * 실험 2의 진단: 임베딩이 문서 주제는 구분하지만 문서 내 섹션 변별이 약해
+ * 임베딩은 문서 주제는 구분하지만 문서 내 섹션 변별이 약해
  * "정답 문서의 엉뚱한 섹션"이 top-K를 채운다. 후보를 넓게(topK×4) 뽑아
  * LLM이 질문과의 관련도를 상대 비교해 재정렬하면 이 실패 유형을 직접 겨냥한다.
  *
@@ -15,6 +15,7 @@ import type { Retriever } from './retriever.js';
  *
  * 상수·프롬프트는 run 메타데이터 기록용으로 export한다 (RAG_SYSTEM_PROMPT 해시 기록과 동일 규약).
  */
+
 export const RERANK_CANDIDATE_MULTIPLIER = 4;
 /** rerank 프롬프트에 넣는 청크당 최대 길이 — 비용 제어. breadcrumb을 별도 표기하므로 주제 판별에 충분 */
 export const RERANK_PASSAGE_CHAR_LIMIT = 700;
@@ -43,13 +44,13 @@ export function createLlmRerankedRetriever(
       if (candidates.length <= topK) return candidates;
 
       // 생성 프롬프트(buildUserPrompt)와 동일하게 breadcrumb을 명시한다 —
-      // 섹션 heading만으로는 어느 문서인지 판별할 수 없기 때문 (코드리뷰 W1)
+      // 섹션 heading만으로는 어느 문서인지 판별할 수 없기 때문
       const passages = candidates
         .map(
-          (chunk, i) =>
+          (candidate, i) =>
             // slice가 서로게이트 쌍(이모지 등) 중간을 자르면 비정상 유니코드가 되어
             // OpenAI가 요청 전체를 invalid_json으로 거부하는 것을 실측 — toWellFormed로 정리
-            `[${i + 1}] (${chunk.headingPath.join(' > ')})\n${chunk.content
+            `[${i + 1}] (${candidate.headingPath.join(' > ')})\n${candidate.content
               .slice(0, RERANK_PASSAGE_CHAR_LIMIT)
               .toWellFormed()}`,
         )

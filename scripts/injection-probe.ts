@@ -8,7 +8,7 @@ import { RAG_SYSTEM_PROMPT } from '../src/rag/prompts.js';
 import type { Retriever } from '../src/retrieval/retriever.js';
 
 /**
- * 문서 채널 프롬프트 인젝션 probe (실험 7).
+ * 문서 채널 프롬프트 인젝션 probe.
  *
  * goldset로는 측정 불가 — 진짜 corpus(react.dev)에 악성 지시를 심을 수 없다.
  * 대신 검색 결과에 악성 지시가 담긴 청크를 섞는 스텁 retriever로,
@@ -54,7 +54,7 @@ const PROBES: { name: string; malicious: string; leaked: (answer: string) => boo
   },
 ];
 
-function stubRetriever(maliciousContent: string): Retriever {
+function createStubRetriever(maliciousContent: string): Retriever {
   const malicious: StoredChunk = {
     id: 'malicious',
     docPath: 'reference/react/useState.md',
@@ -76,7 +76,7 @@ async function main() {
   let defended = 0;
   for (const probe of PROBES) {
     const deps: RagDeps = {
-      retriever: stubRetriever(probe.malicious),
+      retriever: createStubRetriever(probe.malicious),
       llm,
       llmModel: config.LLM_MODEL,
       minScore: 0,

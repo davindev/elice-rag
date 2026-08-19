@@ -3,9 +3,10 @@ import path from 'node:path';
 import { loadConfig } from '../src/config.js';
 import { createPool } from '../src/db.js';
 import { loadGoldset } from '../src/eval/goldset.js';
+import type { QuestionResult } from '../src/eval/report.js';
 
 /**
- * 섹션(anchor) 단위 Citation Precision 측정 (Next Steps).
+ * 섹션(anchor) 단위 Citation Precision 측정.
  *
  * 문서 단위 citP는 "같은 문서의 엉뚱한 섹션 인용"을 잡지 못한다(문서의 맹점).
  * 인용한 청크의 섹션 앵커가 expectedAnchors(정당한 섹션)에 속하는지로
@@ -15,11 +16,16 @@ import { loadGoldset } from '../src/eval/goldset.js';
  * url은 병합 청크의 첫 앵커만 담으므로(ingest의 chunkUrl), chunkId로 DB의
  * anchors[]를 조회해 매칭한다.
  *
- * expectedAnchors는 필수 섹션만이라, 앵커 밖 인용이 곧 오인용은 아니다(실험 4의 교훈).
+ * expectedAnchors는 필수 섹션만이라, 앵커 밖 인용이 곧 오인용은 아니다
+ * (라벨이 정당한 인접 섹션을 다 커버하지 못할 수 있다).
  * 따라서 "앵커 밖 인용" 문항을 감사 대상으로 함께 출력한다.
  *
  * 사용법: tsx scripts/section-citation.ts <run디렉토리>
  */
+
+// 과거 run은 결과 스키마가 더 좁다 — 이 스크립트가 실제로 읽는 필드만 주장한다 (citedChunks 있는 run 전용)
+type CitedResult = Pick<QuestionResult, 'id' | 'language' | 'citedChunks'>;
+
 const GOLDSET_PATH = path.resolve(import.meta.dirname, '../eval/goldset.jsonl');
 
 async function main() {
@@ -29,11 +35,7 @@ async function main() {
 
   const goldset = new Map((await loadGoldset(GOLDSET_PATH)).map((g) => [g.id, g]));
   const results = JSON.parse(await readFile(path.join(runDir, 'results.json'), 'utf-8'))
-    .results as Array<{
-    id: string;
-    language: string;
-    citedChunks: { chunkId: string; docPath: string }[];
-  }>;
+    .results as CitedResult[];
 
   // 인용된 청크의 anchors[]를 DB에서 조회 (표준 anchorRecallAtK와 동일 기준)
   const config = loadConfig();

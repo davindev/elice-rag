@@ -90,7 +90,7 @@ describe('askDetailed — 멀티턴 리라이팅', () => {
     });
     expect((await askDetailed(refusal, 'q', 2)).result.answerable).toBe(false);
 
-    // 근거 있는 부분을 답하고 끝에 sentinel을 붙인 부분 답변은 거부로 파기하지 않는다 (실험 7)
+    // 근거 있는 부분을 답하고 끝에 sentinel을 붙인 부분 답변은 거부로 파기하지 않는다
     const partial = fakeDeps({
       answer: 'useState returns two values [1]. React 19 changes: INSUFFICIENT_CONTEXT',
       retrievedQueries: [],

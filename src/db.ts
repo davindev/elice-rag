@@ -25,7 +25,7 @@ export async function upsertChunks(
   pool: pg.Pool,
   chunks: Chunk[],
   embeddings: number[][],
-  urlOf: (chunk: Chunk) => string,
+  chunkUrl: (chunk: Chunk) => string,
 ): Promise<void> {
   const client = await pool.connect();
   try {
@@ -44,7 +44,7 @@ export async function upsertChunks(
           chunk.docPath,
           chunk.headingPath,
           chunk.anchors,
-          urlOf(chunk),
+          chunkUrl(chunk),
           chunk.content,
           chunk.tokenCount,
           toVectorLiteral(embedding),

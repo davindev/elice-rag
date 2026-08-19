@@ -1,27 +1,38 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { clientConfigOf, loadConfig } from '../src/config.js';
-import { loadGoldset } from '../src/eval/goldset.js';
+import { expectsRefusal, loadGoldset } from '../src/eval/goldset.js';
 import { type JudgeDeps, judgeCorrectness, judgeFaithfulness } from '../src/eval/judge.js';
+import { mean } from '../src/eval/metrics.js';
+import type { QuestionResult } from '../src/eval/report.js';
 import { createOpenAiCompatibleClient } from '../src/llm/client.js';
 
+// 과거 run은 결과 스키마가 더 좁다 — 이 스크립트가 실제로 읽는 필드만 주장한다 (citedChunks 있는 run 전용)
+type StoredAnswer = Pick<
+  QuestionResult,
+  'id' | 'language' | 'systemAnswerable' | 'answer' | 'citedChunks'
+>;
+
 /**
- * Judge 판정 분산 실측 (Next Steps).
+ * Judge 판정 분산 실측.
  *
  * 저장된 run의 동일 답변을 같은 Judge(config의 JUDGE_MODEL)로 N회 재채점해,
- * 문항별 판정이 얼마나 흔들리는지 정량화한다. "±0.5 분산 범위 내"라는
- * 문서 전반의 주장에 실측 근거를 부여한다.
+ * 문항별 판정이 얼마나 흔들리는지 정량화한다 — 판정 분산의 실제 크기를 재야
+ * 단일 run 간 judge metric 차이가 의미 있는지 판단할 수 있다.
  *
  * 사용법: tsx scripts/judge-variance.ts <run디렉토리> [반복횟수=3]
  */
+
 const GOLDSET_PATH = path.resolve(import.meta.dirname, '../eval/goldset.jsonl');
-const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 
 async function main() {
   const runDir = process.argv[2];
   const repeats = Number(process.argv[3] ?? '3');
   if (runDir === undefined)
     throw new Error('사용법: tsx scripts/judge-variance.ts <run디렉토리> [반복=3]');
+  // 반복 0회는 "분산 없음"이라는 정반대 결론으로 위장되므로 여기서 막는다
+  if (!Number.isInteger(repeats) || repeats < 1)
+    throw new Error(`반복 횟수가 잘못되었습니다: ${process.argv[3]}`);
 
   const config = loadConfig();
   const llm = createOpenAiCompatibleClient(clientConfigOf(config));
@@ -29,37 +40,30 @@ async function main() {
 
   const goldset = new Map((await loadGoldset(GOLDSET_PATH)).map((g) => [g.id, g]));
   const results = JSON.parse(await readFile(path.join(runDir, 'results.json'), 'utf-8'))
-    .results as Array<{
-    id: string;
-    language: string;
-    systemAnswerable: boolean;
-    answer: string;
-    citedChunks: { index: number; content: string }[];
-  }>;
+    .results as StoredAnswer[];
 
-  const targets = results.filter((r) => {
+  // 원 run의 judge 호출 조건(비-거부 유형 & 시스템이 답변함) ∩ 주집계 대상(en).
+  // ko도 원 run에서는 judge되지만, en 헤드라인과 분모가 달라 분산 측정에서는 제외한다.
+  const targets = results.flatMap((r) => {
     const g = goldset.get(r.id);
-    return (
-      g !== undefined &&
-      r.language === 'en' &&
-      g.type !== 'unanswerable' &&
-      g.type !== 'injection' &&
-      r.systemAnswerable
-    );
+    if (g === undefined || r.language !== 'en') return [];
+    if (expectsRefusal(g.type)) return [];
+    if (!r.systemAnswerable) return []; // false refusal은 원 run에서도 결정적 0 (judge 미호출)
+    return [{ r, g }];
   });
 
   console.log(
     `Judge 분산 — judge=${config.JUDGE_MODEL}, 문항 ${targets.length}, 반복 ${repeats}회\n`,
   );
 
-  // 문항별 N회 판정 수집
+  // 불변식: corrRuns[i][j]와 faithRuns[i][j]는 targets[j] 문항의 i번째 반복 판정 —
+  // 아래 루프가 targets 순서대로 조건 없이 정확히 1회씩 push하므로 인덱스가 정합한다
   const corrRuns: number[][] = [];
   const faithRuns: number[][] = [];
-  for (let i = 0; i < repeats; i++) {
+  for (let i = 0; i < repeats; i += 1) {
     const corr: number[] = [];
     const faith: number[] = [];
-    for (const r of targets) {
-      const g = goldset.get(r.id)!;
+    for (const { r, g } of targets) {
       const citedPassages =
         r.citedChunks.length === 0
           ? '(no passages cited)'
@@ -90,12 +94,11 @@ async function main() {
     );
   }
 
-  // 문항별로 N회 중 값이 갈린 문항 집계
   const flip = (runs: number[][]) => {
     const flipped: string[] = [];
     targets.forEach((t, j) => {
       const vals = runs.map((run) => run[j]);
-      if (new Set(vals).size > 1) flipped.push(`${t.id}(${vals.join('/')})`);
+      if (new Set(vals).size > 1) flipped.push(`${t.r.id}(${vals.join('/')})`);
     });
     return flipped;
   };

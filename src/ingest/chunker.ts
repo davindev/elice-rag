@@ -68,7 +68,7 @@ export function chunkDocument(
     const content = pending.texts.join('\n\n').trim();
     if (content.length > 0) {
       chunks.push(
-        makeChunk(docPath, pending.headingPath, pending.anchor, pending.anchors, content),
+        createChunk(docPath, pending.headingPath, pending.anchor, pending.anchors, content),
       );
     }
     pending = null;
@@ -93,7 +93,7 @@ export function chunkDocument(
     if (tokens > maxTokens) {
       flush();
       for (const part of splitOversized(text, maxTokens)) {
-        chunks.push(makeChunk(docPath, headingPath, section.anchor, sectionAnchors, part));
+        chunks.push(createChunk(docPath, headingPath, section.anchor, sectionAnchors, part));
       }
       pendingH2 = currentH2;
       continue;
@@ -199,7 +199,7 @@ function splitParagraphs(text: string): string[] {
   return paragraphs;
 }
 
-function makeChunk(
+function createChunk(
   docPath: string,
   headingPath: string[],
   anchor: string | null,

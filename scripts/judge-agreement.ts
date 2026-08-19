@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { z } from 'zod';
+import type { QuestionResult } from '../src/eval/report.js';
 
 /**
  * LLM Judge와 사람 라벨의 일치율을 측정한다 (Judge Human-Alignment 검증).
@@ -10,6 +12,14 @@ import { z } from 'zod';
  * 각 줄: {"id","metric","humanScore","run"} — run은 채점 대상 답변이 나온
  * eval/runs/<run> 디렉토리명 (라벨은 특정 run의 답변에 대한 판정이므로 반드시 그 run과 비교).
  */
+
+// 과거 run은 스키마가 더 좁다(citedChunks 등이 없는 run이 eval/runs에 실재) — 실제로 읽는 필드만 주장한다
+type ScoredResult = Pick<QuestionResult, 'id' | 'metrics'>;
+
+const LABELS_PATH = path.resolve(import.meta.dirname, '../eval/human-labels.jsonl');
+const RUNS_DIR = path.resolve(import.meta.dirname, '../eval/runs');
+
+// 손으로 작성한 파일 = 시스템 경계이므로 zod로 검증한다
 const humanLabelSchema = z.object({
   id: z.string(),
   metric: z.enum(['faithfulness', 'correctness']),
@@ -17,34 +27,20 @@ const humanLabelSchema = z.object({
   run: z.string().min(1),
 });
 
-// N/A metric(NaN)은 JSON 직렬화 과정에서 null이 된다
-const resultsSchema = z.object({
-  results: z.array(
-    z.object({
-      id: z.string(),
-      metrics: z.object({
-        faithfulness: z.number().nullable(),
-        correctness: z.number().nullable(),
-      }),
-    }),
-  ),
-});
-
 async function main() {
-  const labels = (await readFile('eval/human-labels.jsonl', 'utf-8'))
+  const labels = (await readFile(LABELS_PATH, 'utf-8'))
     .trim()
     .split('\n')
     .map((line) => humanLabelSchema.parse(JSON.parse(line)));
 
   const runNames = [...new Set(labels.map((l) => l.run))];
-  const runs = new Map<
-    string,
-    Map<string, { faithfulness: number | null; correctness: number | null }>
-  >();
+  const runs = new Map<string, Map<string, ScoredResult['metrics']>>();
   for (const run of runNames) {
-    const { results } = resultsSchema.parse(
-      JSON.parse(await readFile(`eval/runs/${run}/results.json`, 'utf-8')),
-    );
+    // N/A metric(NaN)은 JSON 직렬화 시 null이 되므로, 읽을 때 NaN으로 복원해 코드 규약과 맞춘다
+    const { results } = JSON.parse(
+      await readFile(path.join(RUNS_DIR, run, 'results.json'), 'utf-8'),
+      (_, value) => (value === null ? Number.NaN : value),
+    ) as { results: ScoredResult[] };
     runs.set(run, new Map(results.map((r) => [r.id, r.metrics])));
   }
 
@@ -55,7 +51,7 @@ async function main() {
 
   for (const label of labels) {
     const judgeScore = runs.get(label.run)?.get(label.id)?.[label.metric];
-    if (judgeScore === undefined || judgeScore === null) continue;
+    if (judgeScore === undefined || Number.isNaN(judgeScore)) continue;
     compared += 1;
     const diff = Math.abs(judgeScore - label.humanScore);
     if (diff === 0) exact += 1;

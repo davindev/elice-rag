@@ -38,7 +38,7 @@ const RETRIEVER_SPECS: Record<RetrieverKind, RetrieverSpec> = {
     usesRerank: false,
     create: (deps) => createHybridRetriever(deps.pool, deps.llm, deps.embeddingModel),
   },
-  // base는 dense — 실험 2(top-5)와 후속 측정 2(후보 20개 깊이) 모두에서 hybrid base의 이득이 없음을 확인
+  // base는 dense — top-5 비교와 깊은 후보 풀(20개) 비교 모두에서 hybrid base의 이득이 없음을 실측
   rerank: {
     usesRerank: true,
     create: (deps) =>

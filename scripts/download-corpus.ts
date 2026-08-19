@@ -9,6 +9,7 @@ import { CORPUS_PINNED_SHA } from '../src/corpus-version.js';
  * reactjs/react.dev 레포에서 corpus를 다운로드한다.
  * 커밋 SHA를 고정해 언제 실행해도 동일한 corpus가 재현된다.
  */
+
 const TARBALL_URL = `https://codeload.github.com/reactjs/react.dev/tar.gz/${CORPUS_PINNED_SHA}`;
 const PREFIX = `react.dev-${CORPUS_PINNED_SHA}`;
 const CORPUS_DIRS = ['src/content/learn', 'src/content/reference/react'];

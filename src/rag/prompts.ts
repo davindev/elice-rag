@@ -30,9 +30,10 @@ History: user: "useReducer가 뭐야?" / assistant: "useReducer는 컴포넌트�
 Follow-up: "그거랑 useState는 뭐가 달라?"
 Rewritten: "difference between useReducer and useState"`;
 
-export function buildUserPrompt(question: string, contexts: StoredChunk[]): string {
-  const passages = contexts
-    .map((chunk, i) => `[${i + 1}] (${chunk.headingPath.join(' > ')})\n${chunk.content}`)
+// 프롬프트 계층에서는 청크를 passage로 부른다 (저장 계층 chunk → 파이프라인 context → 프롬프트 passage)
+export function buildUserPrompt(question: string, passages: StoredChunk[]): string {
+  const numbered = passages
+    .map((p, i) => `[${i + 1}] (${p.headingPath.join(' > ')})\n${p.content}`)
     .join('\n\n---\n\n');
-  return `Context passages:\n\n${passages}\n\n---\n\nQuestion: ${question}`;
+  return `Context passages:\n\n${numbered}\n\n---\n\nQuestion: ${question}`;
 }

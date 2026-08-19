@@ -55,7 +55,7 @@ async function evaluateItem(
 ): Promise<QuestionResult> {
   const { result, contexts } = await askDetailed(ragDeps, item.question, topK, item.history ?? []);
   const retrievedDocs = contexts.map((chunk) => chunk.docPath);
-  const isRefusalExpected = expectsRefusal(item.type);
+  const refusalExpected = expectsRefusal(item.type);
 
   const metrics: QuestionResult['metrics'] = {
     recall: recallAtK(item.expectedEvidence, retrievedDocs),
@@ -68,13 +68,13 @@ async function evaluateItem(
           result.citations,
         )
       : Number.NaN,
-    abstentionCorrect: isRefusalExpected ? (result.answerable ? 0 : 1) : result.answerable ? 1 : 0,
+    abstentionCorrect: refusalExpected ? (result.answerable ? 0 : 1) : result.answerable ? 1 : 0,
     faithfulness: Number.NaN,
     correctness: Number.NaN,
   };
   const judgeReasons: QuestionResult['judgeReasons'] = {};
 
-  if (!isRefusalExpected) {
+  if (!refusalExpected) {
     if (!result.answerable) {
       // 답변 가능한 문항을 거부 → correctness 0 (judge 호출 불필요, 결정적)
       metrics.correctness = 0;
