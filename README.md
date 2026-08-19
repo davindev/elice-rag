@@ -48,7 +48,8 @@ pnpm eval --retriever hybrid   # 검색 전략 변경 (기본값은 dense)
 | `JUDGE_MODEL` / `JUDGE_BASE_URL` | Eval judge 모델 + 엔드포인트 (생성과 다른 계열 권장 — 예: `gemini-3.1-pro-preview`) |
 | `NO_TEMPERATURE_MODELS` | temperature 미지원 reasoning 모델(쉼표 구분). `gpt-5.6-sol`은 temperature=0을 400으로 거부하므로 여기 지정 시 파라미터 생략 |
 | `RERANK_MODEL` / `RERANK_BASE_URL` | (선택) reranker 전용 모델 — 미지정 시 `LLM_MODEL` 사용 |
-| `DATABASE_URL` | 기본값 `postgres://rag:rag@localhost:5432/rag` |
+| `DATABASE_URL` | 필수. `.env.example`에 로컬 docker 기준값(`postgres://rag:rag@localhost:5432/rag`) 제공 |
+| `PORT` | 서버 포트 (기본 3000) |
 | `RETRIEVAL_MIN_SCORE` | retrieval 최고 점수 하한 (기본 0 = 비활성) |
 | `TOP_K` | 검색 컨텍스트 수 (기본 5) |
 | `RETRIEVER` | `dense`(기본) / `hybrid` / `rerank` / `hybrid-rerank` — 검색 전략 선택 |
@@ -87,7 +88,7 @@ curl -N -X POST localhost:3000/ask/stream \
 flowchart TB
     subgraph ING["Ingest — pnpm download-corpus → pnpm ingest"]
         direction LR
-        SRC["reactjs/react.dev<br/>커밋 383a1e9 고정"] --> CLEAN["MDX 클리닝<br/>Sandpack 제거"] --> CHUNK["heading-aware 청킹<br/>병합·분할, 상한 500토큰"] --> EMB["임베딩<br/>내용 해시 id로 증분"]
+        SRC["reactjs/react.dev<br/>커밋 383a1e9 고정"] --> CLEAN["MDX 클리닝<br/>Sandpack 제거"] --> CHUNK["제목 기준 청킹<br/>병합·분할, 상한 500토큰(문단 단위)"] --> EMB["임베딩<br/>페이로드 해시 id로 증분"]
     end
 
     EMB --> DB[("Postgres 17 + pgvector<br/>chunks: embedding · tsv<br/>정확 코사인 검색, ANN 없음")]
@@ -96,7 +97,7 @@ flowchart TB
         direction TB
         Q["질문 (+history)"] --> RW["history 있으면<br/>영어 검색 질의로 리라이팅"]
         RW --> RET["Retriever<br/>dense · hybrid · rerank · hybrid-rerank"]
-        RET --> GATE{"retrieval gate<br/>top-1 ≥ minScore?"}
+        RET --> GATE{"검색 점수 게이트<br/>최고 점수 ≥ minScore?"}
         GATE -- "아니오" --> NO["answerable: false"]
         GATE -- "예" --> GEN["LLM 생성<br/>번호 컨텍스트, [n] 인용, sentinel"]
         GEN --> PARSE["citation 파싱·검증<br/>지어낸 인용 번호 제거"]
@@ -114,7 +115,7 @@ flowchart TB
         JUDGE --> REPORT
     end
 
-    RUNNER -.->|"38문항 질의"| API
+    RUNNER -.->|"같은 파이프라인 호출"| API
 ```
 
 기술 스택은 TypeScript(strict), Hono + zod-openapi, openai SDK, pgvector, vitest, Biome입니다.
@@ -181,9 +182,9 @@ flowchart TB
 <details>
 <summary><b>2. 청킹: 문서의 제목 구조를 따라 분할</b></summary>
 
-- h2/h3/h4 heading 경계로 섹션을 나눕니다. 같은 h2 아래의 작은 섹션들은 상한(500토큰)까지 합치고, 상한을 넘는 섹션은 문단 경계에서 자르되 직전 문단 하나를 겹쳐(overlap) 넣습니다.
+- h1부터 h4까지의 제목 경계로 섹션을 나눕니다(breadcrumb에는 h2 이하를 사용). 같은 h2 아래의 작은 섹션들은 상한(500토큰)까지 합치고, 상한을 넘는 섹션은 문단 경계에서 자르되 직전 문단 하나를 겹쳐(overlap) 넣습니다. 분할이 문단 단위라 단일 문단이 상한을 넘으면 초과가 남습니다(실측 10개, 최대 571토큰).
 - 마크다운 문서에서 heading은 그 자체로 의미 단위입니다. 고정 크기로 분할하면 "Parameters 설명이 두 청크에 걸치는" 식으로 문맥이 끊깁니다. react.dev는 모든 heading에 앵커 ID(`{/*usestate*/}`)가 있어서, heading 단위로 자르면 그대로 문단 수준의 정확한 citation URL(`react.dev/reference/react/useState#usestate`)이 됩니다.
-- 청크 ID를 내용 해시로 만들어서, 다시 인덱싱해도 결과가 같고 내용이 안 바뀐 청크는 임베딩을 다시 호출하지 않습니다(증분 ingest, 비용 절감).
+- 청크 ID를 저장 페이로드(문서 경로·제목 경로·앵커·본문) 해시로 만들어서, 다시 인덱싱해도 결과가 같고 내용이 안 바뀐 청크는 임베딩을 다시 호출하지 않습니다(증분 ingest, 비용 절감).
 - 실제 corpus는 96문서에서 청크 1,003개, 평균 299토큰, p90 476토큰이 나왔습니다.
 </details>
 
@@ -196,7 +197,7 @@ flowchart TB
 <details>
 <summary><b>4. 환각 방지: 세 겹 장치</b></summary>
 
-1. **검색 단계 차단**: 검색 결과 중 가장 유사한 문서조차 기준 점수에 못 미치면, LLM을 호출하지 않고 즉시 응답 불가로 반환합니다. 불필요한 호출 비용과 지연을 줄입니다.
+1. **검색 단계 차단**: 검색 결과 중 가장 높은 점수조차 기준에 못 미치면, 생성 호출 없이 즉시 응답 불가로 반환합니다(멀티턴 질문은 질의 재작성이 먼저 일어납니다). 불필요한 호출 비용과 지연을 줄입니다.
 2. **약속된 거부 신호(sentinel)**: 프롬프트에서 "근거가 없으면 `INSUFFICIENT_CONTEXT`라는 문자열만 출력하라"고 지시합니다. "죄송하지만 찾을 수 없습니다" 같은 자연어 거부를 문구로 판별하면 오탐이 생기고 언어마다 표현이 달라지지만, 약속된 신호 하나만 확인하면 판별이 정확합니다. 스트리밍 응답에서도 이 신호로 시작하는 동안만 출력을 잠시 보류해 거부 여부를 판단합니다.
 3. **인용 번호 검증**: 답변에 달린 `[1]`, `[2]` 같은 인용 번호를 파서가 검사해, 실제로 제공한 문서 범위를 벗어난 번호(모델이 지어낸 인용)는 본문에서 제거합니다.
 </details>
@@ -213,7 +214,7 @@ flowchart TB
 후속 질문("그거 예시 더 알려줘")은 그것만으로는 무엇을 찾아야 할지 알 수 없어서, 단일 턴 파이프라인으로는 실패합니다. 그래서 이렇게 풀었습니다.
 
 - **서버는 상태를 저장하지 않습니다.** 세션 저장소를 두는 대신 클라이언트가 매 요청에 `history`를 전달합니다. 세션 저장소를 도입하면 관리 대상이 하나 늘어나는 반면, 무상태 구조에서는 동일 입력에 동일 출력이 보장되어 테스트와 평가가 단순해집니다.
-- **history가 있을 때만 질문을 다시 씁니다.** LLM을 한 번 호출해 후속 질문을 그 자체로 검색되는 독립형 질의로 바꿉니다. 단일 턴 질의나 Eval(전부 단일 턴)에는 비용도 동작도 그대로입니다.
+- **history가 있을 때만 질문을 다시 씁니다.** LLM을 한 번 호출해 후속 질문을 그 자체로 검색되는 독립형 질의로 바꿉니다. 프롬프트에 넣는 대화 기록은 최근 6개 메시지로 제한합니다. 단일 턴 질의에는 추가 호출이 없고, 평가에서도 38문항 중 멀티턴 3문항에만 리라이팅이 일어납니다.
 - **검색 질의는 영어로 바꿉니다.** corpus가 영어라, 한국어 후속 질문("사용 예시")은 영어 Usage 섹션과 잘 안 맞습니다. 그래서 검색용 질의만 영어로 바꿉니다(답변 언어는 원 질문을 따라 한국어 유지). 실제로 "그거 예시 더 알려줘"가 "useEffect usage examples"로 바뀌어 Usage 섹션을 인용한 답변이 나왔습니다.
 - **바뀐 질의를 눈으로 확인할 수 있습니다.** 다시 쓴 질의를 응답의 `rewrittenQuestion`으로 함께 내려줘서, 리라이팅이 잘 됐는지 볼 수 있습니다.
 - 멀티턴 품질은 Gold Set의 multiturn 유형(3문항, 대화 기록 포함)으로 평가에도 넣었고, 다시 쓴 검색 질의는 응답과 eval 결과에 모두 기록됩니다.
@@ -242,7 +243,7 @@ flowchart TB
 | unanswerable | 5 | corpus에 근거가 없는 질문. 답을 지어내지 않고 거부해야 정답입니다 |
 
 - **언어 분리 집계**: 주 점수는 영어 34문항으로 냅니다. 한국어 4문항은 cross-lingual robustness probe로 분리 집계합니다. 한국어 질의로 영어 문서를 검색하는 경로에는 임베딩의 다국어 성능과 FTS 미작동이라는 별도 변수가 개입하므로, 시스템 자체의 품질 지표와 분리했습니다. 유형별 집계(리포트의 유형별 표)도 영어 문항만 대상으로 합니다.
-- **구축 방법**: 문서를 직접 읽고 문항을 쓴 뒤, 모든 `expectedEvidence` 경로가 corpus에 실제로 있는지, unanswerable 문항의 근거가 corpus 어디에도 없는지 스크립트로 교차 검증했습니다. 평가를 돌리는 과정에서 라벨 자체의 결함 3건을 발견해 보정했습니다(아래 상세).
+- **구축 방법**: 문서를 직접 읽고 문항을 쓴 뒤, 모든 `expectedEvidence` 경로가 corpus에 실제로 있는지, unanswerable 문항의 근거가 corpus 어디에도 없는지 일회성 스크립트로 교차 검증했습니다(검증 스크립트는 커밋하지 않았습니다). 평가를 돌리는 과정에서 라벨 자체의 결함 3건을 발견해 보정했습니다(아래 상세).
 - **편향·한계**: 라벨 교차 검토가 없어 합의 검증이 빠져 있고, 규모가 작아 문항당 분산이 크며, useState 같은 핵심 API에 커버리지가 몰려 있습니다. 실사용 로그가 아니라 직접 쓴 질문이라, 실제 사용자 표현과는 분포가 다를 수 있습니다.
 
 <details>
@@ -260,14 +261,14 @@ flowchart TB
     "expectedAnchors": [{ "doc": "learn/rendering-lists.md", "anchor": "rules-of-keys" }],
                                                              // 근거가 있는 섹션 → Anchor Recall 판정
     "acceptableEvidence": ["learn/tutorial-tic-tac-toe.md"], // 인용해도 정당한 추가 문서 → Citation Precision 전용
-    "acceptanceCriteria": "키는 형제 간 고유해야 하고 변하지 않아야 하며, 렌더 중 생성하면 안 된다는 점을 서술",
+    "acceptanceCriteria": "States that keys must be unique among siblings and must not change (stable), and that keys should not be generated during render.",
                                                              // 자연어 채점 기준 → LLM Judge가 이 기준으로 판정
     "referenceAnswer": "..."                                 // 선택. Judge에게 참고 답안으로 제공
   }
   ```
 
   `expectedEvidence`와 `acceptableEvidence`를 나눈 이유는, "반드시 찾아야 하는 문서"(Recall)와 "인용해도 틀리지 않은 문서"(Precision)의 기준이 서로 다르기 때문입니다. 섹션 앵커(`expectedAnchors`)는 근거 위치가 특정되는 17문항(factoid·multihop·partial)에만 달았고(총 25개 앵커), 문서 전체가 근거인 요약·추론 문항은 생략했습니다.
-- **앵커 라벨의 근거**: react.dev의 제목 앵커는 문서 구조에 고유해서, 청킹 방식이 바뀌어도 라벨이 그대로 유효합니다. 라벨한 앵커 25개가 전부 실제 청크에 존재하는지 스크립트로 전수 확인했습니다.
+- **앵커 라벨의 근거**: react.dev의 제목 앵커는 문서 구조에 고유해서, 청킹 방식이 바뀌어도 라벨이 그대로 유효합니다. 라벨한 앵커 25개가 전부 실제 청크에 존재하는지 일회성 스크립트로 전수 확인했습니다.
 - **평가 과정에서 발견한 라벨 결함 3건**: Gold Set을 만들 때는 문제가 없어 보였으나, 실제로 시스템을 돌려 보고서야 라벨 자체의 오류를 발견한 사례입니다.
   1. **오분류**: `createRoot` 사용법을 묻는 문항을 "corpus에 근거가 없다"(unanswerable)로 분류했는데, 확인해 보니 corpus에 사용 예가 있었습니다. 거부가 정답이 아닌 문항이었으므로 다른 문항으로 교체했습니다.
   2. **수용 기준이 지나치게 좁음**: "타이핑할 때마다 Effect가 재연결되는 원인"을 묻는 문항에서, 문서상 유효한 원인이 두 가지(의존성 배열 누락 / 렌더마다 새로 생성되는 값)인데 기준은 하나만 인정하고 있었습니다. 시스템이 나머지 하나를 답하자 오답 처리됐고, 두 경로를 모두 허용하도록 기준을 확장했습니다.
@@ -287,7 +288,7 @@ flowchart TB
 | Anchor Recall@k (section) | 기대 근거 **섹션**이 top-k 청크에 포함된 비율 | 실험 1에서 doc 단위 Recall이 포화(1.0)되어 변별력을 상실 → 섹션 단위로 해상도를 높인 v3 metric |
 | MRR | 기대 근거 문서의 첫 등장 순위 역수 | 컨텍스트 앞쪽 배치가 인용 정확도에 영향 (순위 민감도) |
 | Citation Precision (citP) | 답변이 인용한 문서 중 정당한 근거(`expectedEvidence` ∪ `acceptableEvidence`)인 비율 | citation이 이 서비스의 핵심 계약 — 엉뚱한 문서 인용을 직접 측정 |
-| Abstention Accuracy / False Refusal Rate | unanswerable 거부율 / answerable 오거부율 | hallucination 방지와 과잉 거부는 트레이드오프 — 양쪽을 모두 측정해야 한 쪽으로의 붕괴를 감지 |
+| Abstention Accuracy / False Refusal Rate | 거부가 정답인 문항(근거 없는 질문·인젝션)의 거부율 / 답변 가능한 문항의 오거부율 | hallucination 방지와 과잉 거부는 트레이드오프 — 양쪽을 모두 측정해야 한 쪽으로의 붕괴를 감지 |
 
 **LLM-as-Judge metric:**
 
@@ -301,7 +302,7 @@ flowchart TB
 - temperature를 0으로 고정하고, 0/0.5/1 세 등급의 채점 기준과 예시를 프롬프트에 명시해 판정 편차를 줄였습니다.
 - Judge를 생성 모델과 다른 계열로 써서, 자기 답을 편애하는(self-preference) 경향을 줄였습니다.
 - Judge 프롬프트의 해시값을 실행 기록에 남겨, 채점 기준이 바뀐 시점을 추적할 수 있게 했습니다.
-- **Human alignment(22건 측정, 개발기 judge 기준)**: 개발기 run 2건(judge `gpt-4o`, goldset v3·v5)의 답변 22건(correctness 15 + faithfulness 7)을 judge 점수를 확인하지 않은 상태에서 동일 rubric으로 직접 채점했습니다(`eval/human-labels.jsonl`, 라벨마다 대상 run을 명시해 그 run과만 비교). judge와 정확히 일치한 게 86.4%, ±0.5 이내가 95.5%였습니다(`scripts/judge-agreement.ts`). 판정이 1.0만큼 갈린 항목은 하나뿐이었는데, 이는 judge의 오판이 아니라 채점 기준이 도중에 바뀐 탓이었습니다. 위 라벨 결함 ②에서 언급한 Effect 재연결 문항으로, 사람이 채점한 시점에는 원인 하나만 인정하는 좁은 기준이었고 judge를 돌린 시점에는 두 원인을 모두 허용하도록 확장된 뒤였습니다. 두 채점이 서로 다른 기준을 보고 이뤄진 것입니다. 이 항목을 제외하면 정확 일치 90.5%, ±0.5 이내 100%입니다. 이 대조에는 두 가지 한계가 있습니다. 첫째, 22건은 표본이 작아 신뢰구간이 넓습니다(19/22의 95% 신뢰구간은 대략 66~95%). 둘째, 이 값은 개발기 judge(`gpt-4o`)를 검증한 것이고 **현재 baseline을 산출하는 Gemini judge에 대한 사람 대조는 아직 없습니다**. 따라서 이 수치는 특정 judge의 정확도가 아니라 "LLM을 채점자로 쓰는 접근이 사람 판정과 크게 어긋나지 않는다"는 것을 한 번 확인한 근거로만 봐야 합니다. 라벨 작성자가 goldset 작성자와 동일하다는 점도 한계입니다.
+- **Human alignment(22건 측정, 개발기 judge 기준)**: 개발기 run 2건(judge `gpt-4o`, 당시 goldset 25문항·30문항 버전)의 답변 22건(correctness 15 + faithfulness 7)을 judge 점수를 확인하지 않은 상태에서 동일 rubric으로 직접 채점했습니다(`eval/human-labels.jsonl`, 라벨마다 대상 run을 명시해 그 run과만 비교). judge와 정확히 일치한 게 86.4%, ±0.5 이내가 95.5%였습니다(`scripts/judge-agreement.ts`). 판정이 1.0만큼 갈린 항목은 하나뿐이었는데, 이는 judge의 오판이 아니라 채점 기준이 도중에 바뀐 탓이었습니다. 위 라벨 결함 ②에서 언급한 Effect 재연결 문항으로, 사람이 채점한 시점에는 원인 하나만 인정하는 좁은 기준이었고 judge를 돌린 시점에는 두 원인을 모두 허용하도록 확장된 뒤였습니다. 두 채점이 서로 다른 기준을 보고 이뤄진 것입니다. 이 항목을 제외하면 정확 일치 90.5%, ±0.5 이내 100%입니다. 이 대조에는 두 가지 한계가 있습니다. 첫째, 22건은 표본이 작아 신뢰구간이 넓습니다(19/22의 95% 신뢰구간은 대략 66~95%). 둘째, 이 값은 개발기 judge(`gpt-4o`)를 검증한 것이고 **현재 baseline을 산출하는 Gemini judge에 대한 사람 대조는 아직 없습니다**. 따라서 이 수치는 특정 judge의 정확도가 아니라 "LLM을 채점자로 쓰는 접근이 사람 판정과 크게 어긋나지 않는다"는 것을 한 번 확인한 근거로만 봐야 합니다. 라벨 작성자가 goldset 작성자와 동일하다는 점도 한계입니다.
 - **Judge 반복 재현성**: 같은 답변을 같은 Judge로 3회 채점한 결과 27개 문항 전부에서 점수가 동일했습니다(실험 10).
 - **Judge 간 교차 검증**: 같은 답변을 Gemini와 Claude Sonnet 5로 각각 채점했을 때 두 Judge의 판정이 약 89% 일치했습니다(27문항, 실험 8). 사람 대조(22건)와는 judge·goldset·분모가 모두 달라 두 일치율의 우열은 비교할 수 없습니다.
 
@@ -786,6 +787,6 @@ en 문항의 dense top-1 코사인 유사도 분포(LLM 불개입, 검색만):
 - **재정렬 결과를 읽지 못하면 원래 순서를 사용합니다**: LLM이 재정렬 결과를 예상한 형식으로 내놓지 않으면 검색 순서를 그대로 씁니다. 발생 횟수는 실행 기록에 남지만, 이런 경우가 포함된 실행은 재정렬의 효과가 실제보다 낮게 측정됩니다.
 - **인용 파서는 `[1]` 형태만 인식합니다**: 모델이 `[1, 2]`처럼 묶어서 출력하면 인용이 하나도 수집되지 않고, 사용자에게 출처 없는 답변이 그대로 전달됩니다. 실험 9에서 실제로 관측했고, 생성 모델을 교체할 때 반드시 확인해야 하는 지점입니다.
 - **데모용 엔드포인트입니다**: 인증이 없고 CORS를 전체 허용하며, 요청 수 제한과 비용 상한이 없습니다. 운영에 쓰려면 인증·오리진 제한·요청 제한이 먼저 필요합니다.
-- **LLM 호출에 타임아웃이 없습니다**: 재정렬 단계에만 1회 재시도가 있고, 그 외에는 재시도나 타임아웃이 없어 일시적인 API 오류가 요청 하나 또는 평가 실행 전체를 실패시킵니다. 관측성도 콘솔 로그 수준입니다.
-- **일부 측정은 저장본이 없습니다**: 실험 10의 판정 반복·점수 분포·섹션 인용 측정은 스크립트를 실행해 콘솔로 확인한 값이라, 실행 결과 파일이 남아 있지 않습니다. 재확인하려면 스크립트를 다시 실행해야 합니다.
+- **타임아웃·재시도를 명시적으로 설정하지 않았습니다**: OpenAI SDK 기본값(재시도 2회, 타임아웃 10분)에 의존하고, 재정렬 단계에만 1회 재시도를 더했습니다. 10분은 대화형 API에 지나치게 길어 사용자 요청 경로에는 짧은 타임아웃을 따로 지정해야 합니다. 관측성도 콘솔 로그 수준입니다.
+- **일부 측정은 저장본이 없습니다**: 실험 4의 라벨 변경 후 오프라인 재채점 결과와, 실험 10의 판정 반복·점수 분포·섹션 인용 측정은 스크립트를 실행해 콘솔로 확인한 값이라 결과 파일이 남아 있지 않습니다. 재확인하려면 스크립트를 다시 실행해야 합니다.
 - **서버 한 대를 전제로 만들었습니다**: 데이터베이스 연결 관리가 단일 프로세스 기준이라, 서버를 여러 대로 늘리려면 이 부분을 다시 설계해야 합니다.
